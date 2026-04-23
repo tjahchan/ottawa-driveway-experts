@@ -18,20 +18,20 @@ const steps = [
     n: "03",
     icon: Sparkles,
     title: "Enjoy Your New Driveway",
-    text: "Sit back as we transform your property. Most projects completed in 1–2 days.",
+    text: "Sit back as we transform your property. Most projects completed in 1 to 2 days.",
   },
 ];
 
 export const Process = () => {
   return (
-    <section className="py-14 md:py-20 bg-secondary">
+    <section className="py-12 md:py-16 bg-secondary">
       <div className="container max-w-[1200px]">
         <Reveal>
-          <div className="max-w-2xl mx-auto text-center mb-10 md:mb-14">
+          <div className="max-w-2xl mx-auto text-center mb-8 md:mb-12">
             <p className="text-xs md:text-sm uppercase tracking-[0.3em] text-accent font-semibold mb-3">
               How It Works
             </p>
-            <h2 className="font-display text-3xl md:text-5xl lg:text-6xl font-semibold text-foreground mb-4 leading-[1.1]">
+            <h2 className="font-display text-3xl md:text-5xl lg:text-6xl font-semibold text-foreground mb-3 leading-[1.1]">
               Simple. Transparent. Done right.
             </h2>
             <p className="text-muted-foreground text-base md:text-lg">

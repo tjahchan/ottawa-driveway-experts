@@ -44,7 +44,7 @@ export const QuoteSection = () => {
   };
 
   return (
-    <section id="quote" className="relative py-14 md:py-20 bg-gradient-dark text-primary-foreground overflow-hidden">
+    <section id="quote" className="relative py-12 md:py-16 bg-gradient-dark text-primary-foreground overflow-hidden">
       <div className="absolute inset-0 opacity-50 pointer-events-none">
         <div className="absolute top-1/4 -left-40 w-[500px] h-[500px] rounded-full bg-accent/10 blur-3xl" />
         <div className="absolute bottom-0 -right-40 w-[600px] h-[600px] rounded-full bg-accent/10 blur-3xl" />

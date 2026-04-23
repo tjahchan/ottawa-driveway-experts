@@ -15,7 +15,7 @@ const reasons = [
   {
     icon: BadgeDollarSign,
     title: "Transparent Pricing",
-    text: "No surprises. Honest, detailed quotes — what you see is what you pay.",
+    text: "No surprises. Honest, detailed quotes, what you see is what you pay.",
   },
   {
     icon: Clock,
@@ -31,13 +31,13 @@ const reasons = [
 
 export const WhyUs = () => {
   return (
-    <section id="why-us" className="relative py-14 md:py-20 bg-gradient-dark text-primary-foreground overflow-hidden">
+    <section id="why-us" className="relative py-12 md:py-16 bg-gradient-dark text-primary-foreground overflow-hidden">
       {/* Decorative glow */}
       <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full opacity-30 blur-3xl bg-accent/20 pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full opacity-20 blur-3xl bg-accent/30 pointer-events-none" />
 
       <div className="container relative z-10 max-w-[1200px]">
-        <div className="grid lg:grid-cols-12 gap-10 lg:gap-14 items-start">
+        <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           <Reveal className="lg:col-span-5">
             <div className="lg:sticky lg:top-28">
               <p className="text-xs md:text-sm uppercase tracking-[0.3em] text-accent font-semibold mb-3">
@@ -48,8 +48,8 @@ export const WhyUs = () => {
                 <span className="text-gradient-gold italic">stands the test</span>{" "}
                 of Ottawa winters.
               </h2>
-              <p className="text-primary-foreground/70 text-base md:text-lg leading-relaxed">
-                We're not the cheapest paving company in Ottawa — we're the one homeowners call when they want it done right the first time.
+              <p className="text-primary-foreground/75 text-base md:text-lg leading-relaxed">
+                We're trusted by Ottawa homeowners for delivering durable, high-quality driveways built to last. Every project is completed with precision, premium materials, and a commitment to doing it right.
               </p>
             </div>
           </Reveal>

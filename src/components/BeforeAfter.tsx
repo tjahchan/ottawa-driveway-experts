@@ -74,7 +74,7 @@ const Compare = ({ before, after, title }: CompareProps) => {
   return (
     <div
       ref={containerRef}
-      className="relative aspect-[4/3] md:aspect-[16/10] w-full overflow-hidden rounded-2xl select-none cursor-ew-resize bg-surface-dark"
+      className="relative aspect-[4/3] md:aspect-[16/9] w-full overflow-hidden rounded-2xl select-none cursor-ew-resize bg-surface-dark"
       onMouseDown={(e) => {
         dragging.current = true;
         updatePos(e.clientX);
@@ -87,7 +87,7 @@ const Compare = ({ before, after, title }: CompareProps) => {
       {/* After (full) */}
       <img
         src={after}
-        alt={`${title} — after`}
+        alt={`${title}, after`}
         loading="lazy"
         className="absolute inset-0 w-full h-full object-cover pointer-events-none"
       />
@@ -98,7 +98,7 @@ const Compare = ({ before, after, title }: CompareProps) => {
       >
         <img
           src={before}
-          alt={`${title} — before`}
+          alt={`${title}, before`}
           loading="lazy"
           className="absolute inset-0 h-full object-cover"
           style={{ width: containerRef.current?.offsetWidth || "100%", maxWidth: "none" }}
@@ -133,14 +133,14 @@ export const BeforeAfter = () => {
   const project = projects[active];
 
   return (
-    <section id="projects" className="py-14 md:py-20 bg-secondary">
-      <div className="container max-w-[1200px]">
+    <section id="projects" className="py-12 md:py-16 bg-secondary">
+      <div className="container max-w-[1100px]">
         <Reveal>
-          <div className="max-w-2xl mx-auto text-center mb-10 md:mb-12">
+          <div className="max-w-2xl mx-auto text-center mb-8 md:mb-10">
             <p className="text-xs md:text-sm uppercase tracking-[0.3em] text-accent font-semibold mb-3">
               Real Transformations
             </p>
-            <h2 className="font-display text-3xl md:text-5xl lg:text-6xl font-semibold text-foreground mb-4 leading-[1.1]">
+            <h2 className="font-display text-3xl md:text-5xl lg:text-6xl font-semibold text-foreground mb-3 leading-[1.1]">
               See the difference
             </h2>
             <p className="text-muted-foreground text-base md:text-lg leading-relaxed">
@@ -150,12 +150,12 @@ export const BeforeAfter = () => {
         </Reveal>
 
         <Reveal>
-          <div className="bg-card rounded-3xl p-4 md:p-6 shadow-elegant">
+          <div className="bg-card rounded-3xl p-3 md:p-5 shadow-elegant">
             <Compare before={project.before} after={project.after} title={project.title} />
 
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mt-6 px-2">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mt-4 md:mt-5 px-2">
               <div>
-                <h3 className="font-display text-xl md:text-2xl font-semibold text-foreground">
+                <h3 className="font-display text-lg md:text-xl font-semibold text-foreground">
                   {project.title}
                 </h3>
                 <p className="text-muted-foreground text-sm mt-1">{project.location}</p>
