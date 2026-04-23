@@ -45,12 +45,12 @@ export const WhyUs = () => {
         {/* Header: label left, headline + subtext centered */}
         <div className="relative mb-8 md:mb-10">
           <Reveal>
-            <p className="text-xs md:text-sm uppercase tracking-[0.3em] text-accent font-semibold mb-3 md:absolute md:top-1 md:left-0 text-center md:text-left">
+            <p className="text-xs md:text-sm uppercase tracking-[0.3em] text-accent font-semibold mb-3 text-center">
               Why Choose Us
             </p>
           </Reveal>
           <Reveal delay={80}>
-            <div className="max-w-3xl mx-auto text-center md:pt-8">
+            <div className="max-w-3xl mx-auto text-center">
               <h2 className="font-display text-3xl md:text-5xl lg:text-6xl font-semibold mb-4 leading-[1.1]">
                 Craftsmanship that{" "}
                 <span className="text-gradient-gold italic">stands the test</span>{" "}
