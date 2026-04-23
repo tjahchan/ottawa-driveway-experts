@@ -1,4 +1,5 @@
-import { Quote, Star } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Quote, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { Reveal } from "./Reveal";
 
 const reviews = [
@@ -7,7 +8,7 @@ const reviews = [
     location: "Kanata, ON",
     rating: 5,
     quote:
-      "Professional, fast, and incredible results. Our driveway looks brand new — neighbors keep stopping to ask who did it.",
+      "Professional, fast, and incredible results. Our driveway looks brand new. Neighbors keep stopping to ask who did it.",
   },
   {
     name: "David L.",
@@ -33,15 +34,26 @@ const reviews = [
 ];
 
 export const Testimonials = () => {
+  const [index, setIndex] = useState(0);
+  const total = reviews.length;
+
+  const next = useCallback(() => setIndex((i) => (i + 1) % total), [total]);
+  const prev = useCallback(() => setIndex((i) => (i - 1 + total) % total), [total]);
+
+  useEffect(() => {
+    const id = setInterval(next, 5000);
+    return () => clearInterval(id);
+  }, [next]);
+
   return (
-    <section id="reviews" className="py-14 md:py-20 bg-background">
-      <div className="container max-w-[1200px]">
+    <section id="reviews" className="py-12 md:py-16 bg-background">
+      <div className="container max-w-[1100px]">
         <Reveal>
-          <div className="max-w-2xl mx-auto text-center mb-10 md:mb-14">
+          <div className="max-w-2xl mx-auto text-center mb-8 md:mb-10">
             <p className="text-xs md:text-sm uppercase tracking-[0.3em] text-accent font-semibold mb-3">
               Reviews
             </p>
-            <h2 className="font-display text-3xl md:text-5xl lg:text-6xl font-semibold text-foreground mb-4 leading-[1.1]">
+            <h2 className="font-display text-3xl md:text-5xl lg:text-6xl font-semibold text-foreground mb-3 leading-[1.1]">
               Loved by Ottawa homeowners
             </h2>
             <div className="flex items-center justify-center gap-2">
@@ -57,32 +69,76 @@ export const Testimonials = () => {
           </div>
         </Reveal>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
-          {reviews.map((r, i) => (
-            <Reveal key={r.name} delay={i * 80}>
-              <article className="group relative h-full p-7 md:p-9 rounded-3xl bg-card border border-border shadow-card hover:shadow-elegant transition-all duration-500 hover:-translate-y-1">
-                <Quote className="absolute top-7 right-7 w-10 h-10 text-accent/20 transition-colors duration-500 group-hover:text-accent/40" />
-                <div className="flex mb-5">
-                  {[...Array(r.rating)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 fill-accent text-accent" />
-                  ))}
-                </div>
-                <blockquote className="font-display text-lg md:text-xl text-foreground leading-relaxed mb-6 italic">
-                  "{r.quote}"
-                </blockquote>
-                <footer className="flex items-center gap-3 pt-5 border-t border-border">
-                  <div className="w-11 h-11 rounded-full bg-gradient-gold flex items-center justify-center font-semibold text-accent-foreground">
-                    {r.name.charAt(0)}
-                  </div>
-                  <div>
-                    <div className="font-semibold text-foreground">{r.name}</div>
-                    <div className="text-sm text-muted-foreground">{r.location}</div>
-                  </div>
-                </footer>
-              </article>
-            </Reveal>
-          ))}
-        </div>
+        <Reveal>
+          <div className="relative max-w-3xl mx-auto">
+            <div className="overflow-hidden rounded-3xl">
+              <div
+                className="flex transition-transform duration-700 ease-out"
+                style={{ transform: `translateX(-${index * 100}%)` }}
+              >
+                {reviews.map((r) => (
+                  <article
+                    key={r.name}
+                    className="shrink-0 w-full px-1"
+                  >
+                    <div className="relative h-full p-6 md:p-9 rounded-3xl bg-card border border-border shadow-card">
+                      <Quote className="absolute top-6 right-6 w-9 h-9 text-accent/20" />
+                      <div className="flex mb-4">
+                        {[...Array(r.rating)].map((_, i) => (
+                          <Star key={i} className="w-5 h-5 fill-accent text-accent" />
+                        ))}
+                      </div>
+                      <blockquote className="font-display text-base md:text-xl text-foreground leading-relaxed mb-5 italic">
+                        "{r.quote}"
+                      </blockquote>
+                      <footer className="flex items-center gap-3 pt-4 border-t border-border">
+                        <div className="w-11 h-11 rounded-full bg-gradient-gold flex items-center justify-center font-semibold text-accent-foreground">
+                          {r.name.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-foreground">{r.name}</div>
+                          <div className="text-sm text-muted-foreground">{r.location}</div>
+                        </div>
+                      </footer>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center justify-center gap-4 mt-5">
+              <button
+                onClick={prev}
+                aria-label="Previous review"
+                className="w-11 h-11 rounded-full bg-card border border-border shadow-card flex items-center justify-center text-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent transition-all"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+
+              <div className="flex gap-2">
+                {reviews.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setIndex(i)}
+                    aria-label={`Go to review ${i + 1}`}
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      index === i ? "w-8 bg-accent" : "w-2 bg-border hover:bg-muted-foreground/50"
+                    }`}
+                  />
+                ))}
+              </div>
+
+              <button
+                onClick={next}
+                aria-label="Next review"
+                className="w-11 h-11 rounded-full bg-card border border-border shadow-card flex items-center justify-center text-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent transition-all"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </Reveal>
       </div>
     </section>
   );
