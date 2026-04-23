@@ -9,11 +9,11 @@ const stats = [
 
 export const SocialProof = () => {
   return (
-    <section className="py-12 md:py-16 bg-primary text-primary-foreground border-y border-white/10">
-      <div className="container">
+    <section className="py-10 md:py-14 bg-primary text-primary-foreground border-y border-white/10">
+      <div className="container max-w-[1200px]">
         <Reveal>
-          <p className="text-center text-xs md:text-sm uppercase tracking-[0.3em] text-primary-foreground/60 mb-8">
-            Trusted by homeowners across Ottawa
+          <p className="text-center text-xs md:text-sm uppercase tracking-[0.3em] text-primary-foreground/60 mb-6">
+            Trusted for 5-Star Service Across Ottawa
           </p>
         </Reveal>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-4">

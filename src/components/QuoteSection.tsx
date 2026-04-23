@@ -44,23 +44,23 @@ export const QuoteSection = () => {
   };
 
   return (
-    <section id="quote" className="relative py-20 md:py-32 bg-gradient-dark text-primary-foreground overflow-hidden">
+    <section id="quote" className="relative py-14 md:py-20 bg-gradient-dark text-primary-foreground overflow-hidden">
       <div className="absolute inset-0 opacity-50 pointer-events-none">
         <div className="absolute top-1/4 -left-40 w-[500px] h-[500px] rounded-full bg-accent/10 blur-3xl" />
         <div className="absolute bottom-0 -right-40 w-[600px] h-[600px] rounded-full bg-accent/10 blur-3xl" />
       </div>
 
-      <div className="container relative z-10">
-        <div className="grid lg:grid-cols-12 gap-10 lg:gap-16 items-start">
+      <div className="container relative z-10 max-w-[1200px]">
+        <div className="grid lg:grid-cols-12 gap-8 lg:gap-14 items-start">
           {/* Left content */}
           <Reveal className="lg:col-span-5">
-            <p className="text-xs md:text-sm uppercase tracking-[0.3em] text-accent font-semibold mb-4">
+            <p className="text-xs md:text-sm uppercase tracking-[0.3em] text-accent font-semibold mb-3">
               Get Started
             </p>
-            <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-semibold mb-5 leading-[1.05]">
+            <h2 className="font-display text-3xl md:text-5xl lg:text-6xl font-semibold mb-4 leading-[1.1]">
               Get your free driveway quote today
             </h2>
-            <p className="text-primary-foreground/75 text-lg leading-relaxed mb-10">
+            <p className="text-primary-foreground/75 text-base md:text-lg leading-relaxed mb-8">
               Fast response. No obligation. Competitive pricing. Tell us about your project and we'll be in touch within 24 hours.
             </p>
 

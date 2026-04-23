@@ -24,17 +24,17 @@ const steps = [
 
 export const Process = () => {
   return (
-    <section className="py-20 md:py-32 bg-secondary">
-      <div className="container">
+    <section className="py-14 md:py-20 bg-secondary">
+      <div className="container max-w-[1200px]">
         <Reveal>
-          <div className="max-w-2xl mx-auto text-center mb-14 md:mb-20">
-            <p className="text-xs md:text-sm uppercase tracking-[0.3em] text-accent font-semibold mb-4">
+          <div className="max-w-2xl mx-auto text-center mb-10 md:mb-14">
+            <p className="text-xs md:text-sm uppercase tracking-[0.3em] text-accent font-semibold mb-3">
               How It Works
             </p>
-            <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-semibold text-foreground mb-5">
+            <h2 className="font-display text-3xl md:text-5xl lg:text-6xl font-semibold text-foreground mb-4 leading-[1.1]">
               Simple. Transparent. Done right.
             </h2>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-muted-foreground text-base md:text-lg">
               Three easy steps to your dream driveway.
             </p>
           </div>
