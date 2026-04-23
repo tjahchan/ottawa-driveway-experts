@@ -51,7 +51,7 @@ export const Testimonials = () => {
                 ))}
               </div>
               <span className="text-muted-foreground">
-                <strong className="text-foreground">5.0</strong> average from 100+ reviews
+                <strong className="text-foreground">Trusted for 5-Star Service Across Ottawa</strong>
               </span>
             </div>
           </div>

@@ -6,7 +6,7 @@ export const Hero = () => {
   return (
     <section
       id="top"
-      className="relative min-h-[100svh] flex items-center justify-center overflow-hidden"
+      className="relative flex items-center overflow-hidden"
     >
       {/* Background */}
       <div className="absolute inset-0">
@@ -23,10 +23,10 @@ export const Hero = () => {
       </div>
 
       {/* Content */}
-      <div className="container relative z-10 pt-28 pb-20 md:py-32">
+      <div className="container relative z-10 pt-28 pb-10 md:pt-32 md:pb-16 max-w-[1200px]">
         <div className="max-w-3xl">
           <div
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white/90 text-xs md:text-sm font-medium mb-8 animate-fade-in opacity-0"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white/90 text-xs md:text-sm font-medium mb-6 animate-fade-in opacity-0"
             style={{ animationDelay: "0.1s" }}
           >
             <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
@@ -34,7 +34,7 @@ export const Hero = () => {
           </div>
 
           <h1
-            className="font-display text-white text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.05] font-semibold mb-6 animate-fade-in opacity-0"
+            className="font-display text-white text-[2.25rem] sm:text-5xl md:text-6xl lg:text-7xl leading-[1.15] md:leading-[1.1] font-semibold mb-5 animate-fade-in opacity-0"
             style={{ animationDelay: "0.25s" }}
           >
             Premium Driveways{" "}
@@ -43,14 +43,14 @@ export const Hero = () => {
           </h1>
 
           <p
-            className="text-white/85 text-lg md:text-xl max-w-2xl mb-10 leading-relaxed animate-fade-in opacity-0"
+            className="text-white/85 text-base md:text-xl max-w-2xl mb-8 leading-relaxed animate-fade-in opacity-0"
             style={{ animationDelay: "0.4s" }}
           >
-            Expert paving, sealing, and interlock services — designed to elevate your home and stand up to Ottawa's toughest seasons.
+            Expert paving, sealing, and interlock services designed to elevate your home and withstand Ottawa's harsh climate.
           </p>
 
           <div
-            className="flex flex-col sm:flex-row gap-4 mb-12 animate-fade-in opacity-0"
+            className="flex flex-col sm:flex-row gap-3 mb-8 animate-fade-in opacity-0"
             style={{ animationDelay: "0.55s" }}
           >
             <a href="#quote">
@@ -68,7 +68,7 @@ export const Hero = () => {
           </div>
 
           <div
-            className="flex flex-wrap items-center gap-x-8 gap-y-3 text-white/85 text-sm animate-fade-in opacity-0"
+            className="flex flex-wrap items-center gap-x-6 gap-y-2 text-white/85 text-sm animate-fade-in opacity-0"
             style={{ animationDelay: "0.7s" }}
           >
             <div className="flex items-center gap-2">
@@ -89,12 +89,6 @@ export const Hero = () => {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 hidden md:flex flex-col items-center gap-2 text-white/60 animate-float">
-        <span className="text-[10px] uppercase tracking-[0.3em]">Scroll</span>
-        <div className="w-px h-10 bg-gradient-to-b from-white/60 to-transparent" />
       </div>
     </section>
   );
