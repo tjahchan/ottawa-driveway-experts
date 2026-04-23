@@ -1,33 +1,34 @@
 import { useRef, useState, useCallback, useEffect } from "react";
+import { ChevronLeft, ChevronRight, MoveHorizontal } from "lucide-react";
 import { Reveal } from "./Reveal";
 import before1 from "@/assets/before-1.jpg";
 import after1 from "@/assets/after-1.jpg";
-import before2 from "@/assets/before-2.jpg";
-import after2 from "@/assets/after-2.jpg";
-import before3 from "@/assets/before-3.jpg";
-import after3 from "@/assets/after-3.jpg";
+import beforeInterlock from "@/assets/transformation-interlock-before.png";
+import afterInterlock from "@/assets/transformation-interlock-after.png";
+import beforeRepairs from "@/assets/transformation-repairs-before.png";
+import afterRepairs from "@/assets/transformation-repairs-after.png";
 
 const projects = [
   {
     id: 1,
+    title: "Interlock Driveway Install",
+    location: "Ottawa, ON",
+    before: beforeInterlock,
+    after: afterInterlock,
+  },
+  {
+    id: 2,
+    title: "Repairs & Resurfacing",
+    location: "Ottawa, ON",
+    before: beforeRepairs,
+    after: afterRepairs,
+  },
+  {
+    id: 3,
     title: "Full Asphalt Replacement",
     location: "Kanata, Ottawa",
     before: before1,
     after: after1,
-  },
-  {
-    id: 2,
-    title: "Premium Driveway Sealing",
-    location: "Orleans, Ottawa",
-    before: before2,
-    after: after2,
-  },
-  {
-    id: 3,
-    title: "Interlock Driveway Install",
-    location: "Barrhaven, Ottawa",
-    before: before3,
-    after: after3,
   },
 ];
 
@@ -74,7 +75,7 @@ const Compare = ({ before, after, title }: CompareProps) => {
   return (
     <div
       ref={containerRef}
-      className="relative aspect-[4/3] md:aspect-[16/9] w-full overflow-hidden rounded-2xl select-none cursor-ew-resize bg-surface-dark"
+      className="relative aspect-[4/3] sm:aspect-[16/10] md:aspect-[16/8] w-full overflow-hidden rounded-2xl select-none cursor-ew-resize bg-surface-dark"
       onMouseDown={(e) => {
         dragging.current = true;
         updatePos(e.clientX);
@@ -106,11 +107,17 @@ const Compare = ({ before, after, title }: CompareProps) => {
       </div>
 
       {/* Labels */}
-      <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-surface-darker/80 backdrop-blur-md text-white text-xs font-semibold uppercase tracking-wider pointer-events-none">
+      <div className="absolute top-3 left-3 px-3 py-1.5 rounded-full bg-surface-darker/80 backdrop-blur-md text-white text-xs font-semibold uppercase tracking-wider pointer-events-none">
         Before
       </div>
-      <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-accent text-accent-foreground text-xs font-semibold uppercase tracking-wider pointer-events-none">
+      <div className="absolute top-3 right-3 px-3 py-1.5 rounded-full bg-accent text-accent-foreground text-xs font-semibold uppercase tracking-wider pointer-events-none">
         After
+      </div>
+
+      {/* Hint overlay */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-darker/70 backdrop-blur-md text-white text-xs font-medium pointer-events-none">
+        <MoveHorizontal className="w-3.5 h-3.5" />
+        Drag or click to see the difference
       </div>
 
       {/* Slider line */}
@@ -118,8 +125,8 @@ const Compare = ({ before, after, title }: CompareProps) => {
         className="absolute top-0 bottom-0 w-0.5 bg-white shadow-[0_0_20px_rgba(0,0,0,0.5)] pointer-events-none"
         style={{ left: `${position}%` }}
       >
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white shadow-elegant flex items-center justify-center">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white shadow-elegant flex items-center justify-center">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
             <path d="M7 5L3 10L7 15M13 5L17 10L13 15" stroke="hsl(var(--primary))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
@@ -130,13 +137,17 @@ const Compare = ({ before, after, title }: CompareProps) => {
 
 export const BeforeAfter = () => {
   const [active, setActive] = useState(0);
+  const total = projects.length;
   const project = projects[active];
+
+  const next = () => setActive((i) => (i + 1) % total);
+  const prev = () => setActive((i) => (i - 1 + total) % total);
 
   return (
     <section id="projects" className="py-12 md:py-16 bg-secondary">
       <div className="container max-w-[1100px]">
         <Reveal>
-          <div className="max-w-2xl mx-auto text-center mb-8 md:mb-10">
+          <div className="max-w-2xl mx-auto text-center mb-6 md:mb-8">
             <p className="text-xs md:text-sm uppercase tracking-[0.3em] text-accent font-semibold mb-3">
               Real Transformations
             </p>
@@ -144,21 +155,39 @@ export const BeforeAfter = () => {
               See the difference
             </h2>
             <p className="text-muted-foreground text-base md:text-lg leading-relaxed">
-              Drag the slider to reveal real transformations from homes across Ottawa.
+              Real driveways, transformed across Ottawa.
             </p>
           </div>
         </Reveal>
 
         <Reveal>
-          <div className="bg-card rounded-3xl p-3 md:p-5 shadow-elegant">
-            <Compare before={project.before} after={project.after} title={project.title} />
+          <div className="relative bg-card rounded-3xl p-3 md:p-4 shadow-elegant">
+            <div className="relative">
+              <Compare before={project.before} after={project.after} title={project.title} />
 
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mt-4 md:mt-5 px-2">
+              {/* Arrows */}
+              <button
+                onClick={prev}
+                aria-label="Previous transformation"
+                className="absolute left-2 md:-left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-11 md:h-11 rounded-full bg-card border border-border shadow-card flex items-center justify-center text-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent transition-all"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={next}
+                aria-label="Next transformation"
+                className="absolute right-2 md:-right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-11 md:h-11 rounded-full bg-card border border-border shadow-card flex items-center justify-center text-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent transition-all"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mt-3 md:mt-4 px-2">
               <div>
-                <h3 className="font-display text-lg md:text-xl font-semibold text-foreground">
+                <h3 className="font-display text-base md:text-lg font-semibold text-foreground">
                   {project.title}
                 </h3>
-                <p className="text-muted-foreground text-sm mt-1">{project.location}</p>
+                <p className="text-muted-foreground text-xs md:text-sm mt-0.5">{project.location}</p>
               </div>
 
               <div className="flex gap-2">
@@ -167,8 +196,8 @@ export const BeforeAfter = () => {
                     key={p.id}
                     onClick={() => setActive(i)}
                     aria-label={`View project ${i + 1}`}
-                    className={`h-2.5 rounded-full transition-all duration-300 ${
-                      active === i ? "w-10 bg-accent" : "w-2.5 bg-border hover:bg-muted-foreground/50"
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      active === i ? "w-8 bg-accent" : "w-2 bg-border hover:bg-muted-foreground/50"
                     }`}
                   />
                 ))}
