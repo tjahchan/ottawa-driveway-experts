@@ -23,10 +23,10 @@ export const Hero = () => {
       </div>
 
       {/* Content */}
-      <div className="container relative z-10 pt-28 pb-10 md:pt-32 md:pb-16 max-w-[1200px]">
-        <div className="max-w-3xl">
+      <div className="container relative z-10 pt-24 pb-8 md:pt-28 md:pb-12 max-w-[1200px]">
+        <div className="max-w-[860px]">
           <div
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white/90 text-xs md:text-sm font-medium mb-6 animate-fade-in opacity-0"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white/90 text-xs md:text-sm font-medium mb-5 animate-fade-in opacity-0"
             style={{ animationDelay: "0.1s" }}
           >
             <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
@@ -34,23 +34,23 @@ export const Hero = () => {
           </div>
 
           <h1
-            className="font-display text-white text-[2.25rem] sm:text-5xl md:text-6xl lg:text-7xl leading-[1.15] md:leading-[1.1] font-semibold mb-5 animate-fade-in opacity-0"
+            className="font-display text-white text-[2rem] sm:text-5xl md:text-6xl lg:text-7xl leading-[1.2] md:leading-[1.15] font-semibold mb-5 animate-fade-in opacity-0 pb-1"
             style={{ animationDelay: "0.25s" }}
           >
             Premium Driveways{" "}
-            <span className="text-gradient-gold italic">Built to Last</span>{" "}
+            <span className="text-gradient-gold italic inline-block pb-1">Built to Last</span>{" "}
             in Ottawa
           </h1>
 
           <p
-            className="text-white/85 text-base md:text-xl max-w-2xl mb-8 leading-relaxed animate-fade-in opacity-0"
+            className="text-white/85 text-base md:text-xl max-w-2xl mb-7 leading-relaxed animate-fade-in opacity-0"
             style={{ animationDelay: "0.4s" }}
           >
             Expert paving, sealing, and interlock services designed to elevate your home and withstand Ottawa's harsh climate.
           </p>
 
           <div
-            className="flex flex-col sm:flex-row gap-3 mb-8 animate-fade-in opacity-0"
+            className="flex flex-col sm:flex-row gap-3 mb-7 animate-fade-in opacity-0"
             style={{ animationDelay: "0.55s" }}
           >
             <a href="#quote">
