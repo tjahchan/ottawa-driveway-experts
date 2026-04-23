@@ -87,7 +87,7 @@ const Compare = ({ before, after, title }: CompareProps) => {
       {/* After (full) */}
       <img
         src={after}
-        alt={`${title} — after`}
+        alt={`${title}, after`}
         loading="lazy"
         className="absolute inset-0 w-full h-full object-cover pointer-events-none"
       />
@@ -98,7 +98,7 @@ const Compare = ({ before, after, title }: CompareProps) => {
       >
         <img
           src={before}
-          alt={`${title} — before`}
+          alt={`${title}, before`}
           loading="lazy"
           className="absolute inset-0 h-full object-cover"
           style={{ width: containerRef.current?.offsetWidth || "100%", maxWidth: "none" }}
