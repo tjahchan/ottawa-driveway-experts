@@ -1,4 +1,5 @@
 import { Phone, Mail, MapPin } from "lucide-react";
+import logoFull from "@/assets/chevrier-logo-transparent.png";
 
 export const Footer = () => {
   return (
@@ -6,17 +7,15 @@ export const Footer = () => {
       <div className="container">
         <div className="grid md:grid-cols-4 gap-8 md:gap-8 mb-10">
           <div className="md:col-span-2">
-            <div className="flex items-center gap-2 mb-5">
-              <div className="w-10 h-10 rounded-full bg-gradient-gold flex items-center justify-center font-display font-bold text-accent-foreground">
-                O
-              </div>
-              <div className="flex flex-col leading-none">
-                <span className="font-display font-semibold text-lg text-white">Ottawa Driveway</span>
-                <span className="text-xs uppercase tracking-[0.2em] text-white/50">Experts</span>
-              </div>
-            </div>
-            <p className="text-primary-foreground/60 max-w-md leading-relaxed">
-              Premium driveway paving, sealing & interlock services serving Ottawa and surrounding areas. Family-owned. Fully insured. Built to last.
+            <img
+              src={logoFull}
+              alt="Chevrier Group — Ottawa Driveway Experts"
+              className="h-20 md:h-24 w-auto object-contain mb-5 mx-auto md:mx-0"
+              loading="lazy"
+              decoding="async"
+            />
+            <p className="text-primary-foreground/60 max-w-md leading-relaxed text-center md:text-left mx-auto md:mx-0">
+              Premium driveway paving, sealing and interlock services serving Ottawa and surrounding areas. Family-owned. Fully insured. Built to last.
             </p>
           </div>
 
