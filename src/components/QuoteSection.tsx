@@ -187,6 +187,58 @@ export const QuoteSection = () => {
                     />
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Add a Photo <span className="text-muted-foreground font-normal">(optional)</span>
+                    </label>
+                    <input
+                      ref={fileInputRef}
+                      id="image"
+                      name="image"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                      onChange={handleImageChange}
+                      className="sr-only"
+                    />
+                    {imagePreview ? (
+                      <div className="relative rounded-xl overflow-hidden border border-border bg-secondary group">
+                        <img
+                          src={imagePreview}
+                          alt="Driveway preview"
+                          className="w-full h-40 object-cover"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 p-2 bg-gradient-to-t from-black/70 to-transparent">
+                          <span className="text-xs text-white truncate flex items-center gap-1.5">
+                            <ImageIcon className="w-3.5 h-3.5 shrink-0" />
+                            {image?.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={removeImage}
+                            className="shrink-0 w-7 h-7 rounded-full bg-white/90 hover:bg-white text-foreground flex items-center justify-center transition"
+                            aria-label="Remove image"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full flex flex-col items-center justify-center gap-2 px-4 py-6 rounded-xl bg-secondary border border-dashed border-border hover:border-accent hover:bg-secondary/70 transition text-center"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center">
+                          <Upload className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-foreground">Upload a photo of your driveway</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">JPG, PNG or WEBP • Max 5MB</div>
+                        </div>
+                      </button>
+                    )}
+                  </div>
+
                   <Button type="submit" variant="gold" size="lg" className="w-full gap-2">
                     Request Free Quote
                     <Send className="w-4 h-4" />
