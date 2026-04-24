@@ -1,9 +1,12 @@
-import { useState, type FormEvent } from "react";
-import { Phone, Mail, MapPin, Send, Check } from "lucide-react";
+import { useState, useRef, type FormEvent, type ChangeEvent } from "react";
+import { Phone, Mail, MapPin, Send, Check, Upload, X, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "./Reveal";
 import { toast } from "sonner";
 import { z } from "zod";
+
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 
 const schema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
@@ -24,6 +27,32 @@ const services = [
 export const QuoteSection = () => {
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      toast.error("Please upload a JPG, PNG, WEBP or HEIC image.");
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      toast.error("Image must be less than 5MB.");
+      return;
+    }
+    setImage(file);
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -156,6 +185,58 @@ export const QuoteSection = () => {
                       placeholder="Tell us about your driveway, approximate size, and any questions..."
                       className="w-full px-4 py-3 rounded-xl bg-secondary border border-border focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition resize-none text-foreground placeholder:text-muted-foreground"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Add a Photo <span className="text-muted-foreground font-normal">(optional)</span>
+                    </label>
+                    <input
+                      ref={fileInputRef}
+                      id="image"
+                      name="image"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                      onChange={handleImageChange}
+                      className="sr-only"
+                    />
+                    {imagePreview ? (
+                      <div className="relative rounded-xl overflow-hidden border border-border bg-secondary group">
+                        <img
+                          src={imagePreview}
+                          alt="Driveway preview"
+                          className="w-full h-40 object-cover"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 p-2 bg-gradient-to-t from-black/70 to-transparent">
+                          <span className="text-xs text-white truncate flex items-center gap-1.5">
+                            <ImageIcon className="w-3.5 h-3.5 shrink-0" />
+                            {image?.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={removeImage}
+                            className="shrink-0 w-7 h-7 rounded-full bg-white/90 hover:bg-white text-foreground flex items-center justify-center transition"
+                            aria-label="Remove image"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full flex flex-col items-center justify-center gap-2 px-4 py-6 rounded-xl bg-secondary border border-dashed border-border hover:border-accent hover:bg-secondary/70 transition text-center"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center">
+                          <Upload className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-foreground">Upload a photo of your driveway</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">JPG, PNG or WEBP • Max 5MB</div>
+                        </div>
+                      </button>
+                    )}
                   </div>
 
                   <Button type="submit" variant="gold" size="lg" className="w-full gap-2">
