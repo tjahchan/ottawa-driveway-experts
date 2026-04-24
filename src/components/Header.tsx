@@ -1,8 +1,6 @@
 import { Phone, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import logoDark from "@/assets/chevrier-logo-navbar.png";
-import logoLight from "@/assets/chevrier-logo-navbar-light.png";
 
 const links = [
   { label: "Services", href: "#services" },
@@ -32,14 +30,18 @@ export const Header = () => {
       }`}
     >
       <div className="container flex items-center justify-between h-16 md:h-20">
-        <a href="#top" className="flex items-center group" aria-label="Chevrier Group — Ottawa Driveway Experts">
-          <img
-            src={scrolled ? logoDark : logoLight}
-            alt="Chevrier Group — Ottawa Driveway Experts"
-            className="h-9 sm:h-11 md:h-14 w-auto object-contain transition-all duration-300 group-hover:scale-[1.03]"
-            loading="eager"
-            decoding="async"
-          />
+        <a href="#top" className="flex items-center gap-2 group">
+          <div className={`w-9 h-9 rounded-full bg-gradient-gold flex items-center justify-center font-display font-bold text-accent-foreground transition-transform group-hover:scale-110`}>
+            O
+          </div>
+          <div className="flex flex-col leading-none">
+            <span className={`font-display font-semibold text-base md:text-lg ${scrolled ? "text-foreground" : "text-white"}`}>
+              Ottawa Driveway
+            </span>
+            <span className={`text-[10px] md:text-xs uppercase tracking-[0.2em] ${scrolled ? "text-muted-foreground" : "text-white/70"}`}>
+              Experts
+            </span>
+          </div>
         </a>
 
         <nav className="hidden lg:flex items-center gap-8">
