@@ -1,8 +1,8 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { ChevronLeft, ChevronRight, MoveHorizontal } from "lucide-react";
 import { Reveal } from "./Reveal";
-import before1 from "@/assets/before-1.jpg";
-import after1 from "@/assets/after-1.jpg";
+import beforeAsphalt from "@/assets/transformation-asphalt-before.png";
+import afterAsphalt from "@/assets/transformation-asphalt-after.png";
 import beforeInterlock from "@/assets/transformation-interlock-before.png";
 import afterInterlock from "@/assets/transformation-interlock-after.png";
 import beforeRepairs from "@/assets/transformation-repairs-before.png";
@@ -11,24 +11,24 @@ import afterRepairs from "@/assets/transformation-repairs-after.png";
 const projects = [
   {
     id: 1,
+    title: "Asphalt Driveway Replacement",
+    location: "Ottawa, ON",
+    before: beforeAsphalt,
+    after: afterAsphalt,
+  },
+  {
+    id: 2,
     title: "Interlock Driveway Install",
     location: "Ottawa, ON",
     before: beforeInterlock,
     after: afterInterlock,
   },
   {
-    id: 2,
+    id: 3,
     title: "Repairs & Resurfacing",
     location: "Ottawa, ON",
     before: beforeRepairs,
     after: afterRepairs,
-  },
-  {
-    id: 3,
-    title: "Full Asphalt Replacement",
-    location: "Kanata, Ottawa",
-    before: before1,
-    after: after1,
   },
 ];
 
