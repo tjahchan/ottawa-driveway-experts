@@ -57,7 +57,7 @@ export const Testimonials = () => {
               Loved by Ottawa homeowners
             </h2>
             <div className="flex items-center justify-center gap-2">
-              <div className="flex">
+              <div className="hidden md:flex">
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className="w-5 h-5 fill-accent text-accent" />
                 ))}
@@ -81,21 +81,21 @@ export const Testimonials = () => {
                     key={r.name}
                     className="shrink-0 w-full px-1"
                   >
-                    <div className="relative h-full p-6 md:p-9 rounded-3xl bg-card border border-border shadow-card">
-                      <Quote className="absolute top-6 right-6 w-9 h-9 text-accent/20" />
-                      <div className="flex mb-4">
+                    <div className="relative h-full p-5 md:p-9 rounded-3xl bg-card border border-border shadow-card text-center md:text-left">
+                      <Quote className="hidden md:block absolute top-6 right-6 w-9 h-9 text-accent/20" />
+                      <div className="hidden md:flex mb-4">
                         {[...Array(r.rating)].map((_, i) => (
                           <Star key={i} className="w-5 h-5 fill-accent text-accent" />
                         ))}
                       </div>
-                      <blockquote className="font-display text-base md:text-xl text-foreground leading-relaxed mb-5 italic">
+                      <blockquote className="font-display text-base md:text-xl text-foreground leading-[1.5] mb-5 italic max-w-md md:max-w-none mx-auto">
                         "{r.quote}"
                       </blockquote>
-                      <footer className="flex items-center gap-3 pt-4 border-t border-border">
+                      <footer className="flex flex-col md:flex-row items-center gap-2 md:gap-3 pt-4 border-t border-border">
                         <div className="w-11 h-11 rounded-full bg-gradient-gold flex items-center justify-center font-semibold text-accent-foreground">
                           {r.name.charAt(0)}
                         </div>
-                        <div>
+                        <div className="text-center md:text-left">
                           <div className="font-semibold text-foreground">{r.name}</div>
                           <div className="text-sm text-muted-foreground">{r.location}</div>
                         </div>
