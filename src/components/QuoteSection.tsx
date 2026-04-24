@@ -1,9 +1,12 @@
-import { useState, type FormEvent } from "react";
-import { Phone, Mail, MapPin, Send, Check } from "lucide-react";
+import { useState, useRef, type FormEvent, type ChangeEvent } from "react";
+import { Phone, Mail, MapPin, Send, Check, Upload, X, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "./Reveal";
 import { toast } from "sonner";
 import { z } from "zod";
+
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 
 const schema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
