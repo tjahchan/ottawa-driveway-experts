@@ -1,6 +1,6 @@
 import { ArrowRight, Phone, Star, ShieldCheck, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import heroImg from "@/assets/hero-driveway.jpg";
+import heroImg from "@/assets/images/hero-driveway.jpg";
 
 export const Hero = () => {
   return (
@@ -26,20 +26,29 @@ export const Hero = () => {
       <div className="container relative z-10 pt-24 pb-8 md:pt-28 md:pb-12 max-w-[1200px]">
         <div className="max-w-[860px]">
           <div
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white/90 text-xs md:text-sm font-medium mb-5 animate-fade-in opacity-0"
+            className="flex flex-wrap items-center gap-2 mb-5 animate-fade-in opacity-0"
             style={{ animationDelay: "0.1s" }}
           >
-            <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-            Ottawa's Trusted Paving Specialists
+            <div className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white/90 text-xs md:text-sm font-medium">
+              <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+              Ottawa's Trusted Paving Specialists
+            </div>
+            <a
+              href="tel:+16138641485"
+              aria-label="Call our 24/7 booking line"
+              className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] rounded-full bg-accent/15 backdrop-blur-md border border-accent/40 text-accent text-xs md:text-sm font-medium hover:bg-accent/25 transition-colors"
+            >
+              <Phone className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              24/7 Booking Line — Call Anytime
+            </a>
           </div>
 
           <h1
-            className="font-display text-white text-[2rem] sm:text-5xl md:text-6xl lg:text-7xl leading-[1.2] md:leading-[1.15] font-semibold mb-5 animate-fade-in opacity-0 pb-1"
+            className="font-display text-white text-[2rem] sm:text-5xl md:text-6xl lg:text-7xl leading-[1.25] md:leading-[1.2] font-semibold mb-5 animate-fade-in opacity-0"
             style={{ animationDelay: "0.25s" }}
           >
-            Premium Driveways{" "}
-            <span className="text-gradient-gold italic inline-block pb-1">Built to Last</span>{" "}
-            in Ottawa
+            Expert Asphalt Driveway Paving in Ottawa —{" "}
+            <span className="text-gradient-gold italic">Built to Last</span>
           </h1>
 
           <p
@@ -59,7 +68,7 @@ export const Hero = () => {
                 <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
               </Button>
             </a>
-            <a href="tel:+16138677130">
+            <a href="tel:+16138641485">
               <Button variant="outline-light" size="xl" className="w-full sm:w-auto gap-2">
                 <Phone className="w-5 h-5" />
                 Call Now

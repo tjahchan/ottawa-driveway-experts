@@ -1,45 +1,53 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { ChevronLeft, ChevronRight, MoveHorizontal } from "lucide-react";
 import { Reveal } from "./Reveal";
-import beforeAsphalt from "@/assets/transformation-asphalt-before.png";
-import afterAsphalt from "@/assets/transformation-asphalt-after.png";
-import beforeInterlock from "@/assets/transformation-interlock-before.png";
-import afterInterlock from "@/assets/transformation-interlock-after.png";
-import beforeRepairs from "@/assets/transformation-repairs-before.png";
-import afterRepairs from "@/assets/transformation-repairs-after.png";
+import beforeAsphalt from "@/assets/images/transformation-asphalt-before.png";
+import afterAsphalt from "@/assets/images/transformation-asphalt-after.png";
+import beforeInterlock from "@/assets/images/transformation-interlock-before.png";
+import afterInterlock from "@/assets/images/transformation-interlock-after.png";
+import beforeRepairs from "@/assets/images/transformation-repairs-before.png";
+import afterRepairs from "@/assets/images/transformation-repairs-after.png";
 
-const projects = [
-  {
-    id: 1,
-    title: "Asphalt Driveway Replacement",
-    location: "Ottawa, ON",
-    before: beforeAsphalt,
-    after: afterAsphalt,
-  },
-  {
-    id: 2,
-    title: "Interlock Driveway Install",
-    location: "Ottawa, ON",
-    before: beforeInterlock,
-    after: afterInterlock,
-  },
-  {
-    id: 3,
-    title: "Repairs & Resurfacing",
-    location: "Ottawa, ON",
-    before: beforeRepairs,
-    after: afterRepairs,
-  },
+// Gallery images — real project photos by Chevrier Group Ottawa
+import gallery1 from "@/assets/images/IMG_0007.jpeg";
+import gallery2 from "@/assets/images/IMG_0265.jpg";
+import gallery3 from "@/assets/images/IMG_0268.jpg";
+import gallery4 from "@/assets/images/IMG_0955.jpeg";
+import gallery5 from "@/assets/images/IMG_0963.jpeg";
+import gallery6 from "@/assets/images/IMG_1077.jpeg";
+import gallery7 from "@/assets/images/IMG_1106.jpeg";
+import gallery8 from "@/assets/images/IMG_1187.jpeg";
+import gallery9 from "@/assets/images/IMG_1390.jpeg";
+
+type CarouselCard =
+  | { type: "compare"; id: number; title: string; location: string; before: string; after: string }
+  | { type: "photo"; id: number; src: string; alt: string };
+
+const cards: CarouselCard[] = [
+  { type: "compare", id: 1, title: "Asphalt Driveway Replacement", location: "Ottawa, ON", before: beforeAsphalt, after: afterAsphalt },
+  { type: "compare", id: 2, title: "Interlock Driveway Install", location: "Ottawa, ON", before: beforeInterlock, after: afterInterlock },
+  { type: "compare", id: 3, title: "Repairs & Resurfacing", location: "Ottawa, ON", before: beforeRepairs, after: afterRepairs },
+  { type: "photo", id: 4, src: gallery1, alt: "Completed asphalt driveway project in Ottawa by Chevrier Group" },
+  { type: "photo", id: 5, src: gallery2, alt: "Interlock paver driveway installation in Ottawa by Chevrier Group" },
+  { type: "photo", id: 6, src: gallery3, alt: "Residential driveway paving in Ottawa, Ontario — Chevrier Group" },
+  { type: "photo", id: 7, src: gallery4, alt: "Hot-mix asphalt driveway installed in Ottawa by Chevrier Group" },
+  { type: "photo", id: 8, src: gallery5, alt: "Driveway paving and sealing project in Ottawa by Chevrier Group" },
+  { type: "photo", id: 9, src: gallery6, alt: "Driveway resurfacing project completed in Ottawa, ON" },
+  { type: "photo", id: 10, src: gallery7, alt: "Professional asphalt paving in Ottawa — Chevrier Group" },
+  { type: "photo", id: 11, src: gallery8, alt: "Custom driveway installation in Ottawa, Ontario by Chevrier Group" },
+  { type: "photo", id: 12, src: gallery9, alt: "Ottawa driveway paving project by Chevrier Group" },
 ];
 
 interface CompareProps {
   before: string;
   after: string;
   title: string;
+  eager?: boolean;
 }
 
-const Compare = ({ before, after, title }: CompareProps) => {
+const Compare = ({ before, after, title, eager }: CompareProps & { eager?: boolean }) => {
   const [position, setPosition] = useState(50);
+  const [containerWidth, setContainerWidth] = useState<number | string>("100%");
   const containerRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
 
@@ -72,6 +80,19 @@ const Compare = ({ before, after, title }: CompareProps) => {
     };
   }, [updatePos]);
 
+  // FIX 2a — ResizeObserver keeps containerWidth in sync on resize
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    setContainerWidth(el.offsetWidth);
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) setContainerWidth(entry.contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   return (
     <div
       ref={containerRef}
@@ -88,8 +109,8 @@ const Compare = ({ before, after, title }: CompareProps) => {
       {/* After (full) */}
       <img
         src={after}
-        alt={`${title}, after`}
-        loading="lazy"
+        alt={`${title} — after, Ottawa driveway by Chevrier Group`}
+        loading={eager ? undefined : "lazy"}
         className="absolute inset-0 w-full h-full object-cover pointer-events-none"
       />
       {/* Before (clipped) */}
@@ -99,10 +120,10 @@ const Compare = ({ before, after, title }: CompareProps) => {
       >
         <img
           src={before}
-          alt={`${title}, before`}
-          loading="lazy"
+          alt={`${title} — before, Ottawa driveway by Chevrier Group`}
+          loading={eager ? undefined : "lazy"}
           className="absolute inset-0 h-full object-cover"
-          style={{ width: containerRef.current?.offsetWidth || "100%", maxWidth: "none" }}
+          style={{ width: containerWidth, maxWidth: "none" }}
         />
       </div>
 
@@ -137,8 +158,8 @@ const Compare = ({ before, after, title }: CompareProps) => {
 
 export const BeforeAfter = () => {
   const [active, setActive] = useState(0);
-  const total = projects.length;
-  const project = projects[active];
+  const total = cards.length;
+  const card = cards[active];
 
   const next = () => setActive((i) => (i + 1) % total);
   const prev = () => setActive((i) => (i - 1 + total) % total);
@@ -163,19 +184,30 @@ export const BeforeAfter = () => {
         <Reveal>
           <div className="relative bg-card rounded-3xl p-3 md:p-4 shadow-elegant">
             <div className="relative">
-              <Compare before={project.before} after={project.after} title={project.title} />
+              {card.type === "compare" ? (
+                <Compare before={card.before} after={card.after} title={card.title} eager={active === 0} />
+              ) : (
+                <div className="relative aspect-[4/3] sm:aspect-[16/10] md:aspect-[16/8] w-full overflow-hidden rounded-2xl bg-surface-dark">
+                  <img
+                    src={card.src}
+                    alt={card.alt}
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </div>
+              )}
 
               {/* Arrows */}
               <button
                 onClick={prev}
-                aria-label="Previous transformation"
+                aria-label="Previous"
                 className="absolute left-2 md:-left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-11 md:h-11 rounded-full bg-card border border-border shadow-card flex items-center justify-center text-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent transition-all"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <button
                 onClick={next}
-                aria-label="Next transformation"
+                aria-label="Next"
                 className="absolute right-2 md:-right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-11 md:h-11 rounded-full bg-card border border-border shadow-card flex items-center justify-center text-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent transition-all"
               >
                 <ChevronRight className="w-5 h-5" />
@@ -183,21 +215,25 @@ export const BeforeAfter = () => {
             </div>
 
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mt-3 md:mt-4 px-2">
-              <div>
-                <h3 className="font-display text-base md:text-lg font-semibold text-foreground">
-                  {project.title}
-                </h3>
-                <p className="text-muted-foreground text-xs md:text-sm mt-0.5">{project.location}</p>
+              <div className="min-h-[2.5rem]">
+                {card.type === "compare" && (
+                  <>
+                    <h3 className="font-display text-base md:text-lg font-semibold text-foreground">
+                      {card.title}
+                    </h3>
+                    <p className="text-muted-foreground text-xs md:text-sm mt-0.5">{card.location}</p>
+                  </>
+                )}
               </div>
 
-              <div className="flex gap-2">
-                {projects.map((p, i) => (
+              <div className="flex gap-1.5 flex-wrap">
+                {cards.map((c, i) => (
                   <button
-                    key={p.id}
+                    key={c.id}
                     onClick={() => setActive(i)}
-                    aria-label={`View project ${i + 1}`}
+                    aria-label={`View card ${i + 1}`}
                     className={`h-2 rounded-full transition-all duration-300 ${
-                      active === i ? "w-8 bg-accent" : "w-2 bg-border hover:bg-muted-foreground/50"
+                      active === i ? "w-6 bg-accent" : "w-2 bg-border hover:bg-muted-foreground/50"
                     }`}
                   />
                 ))}

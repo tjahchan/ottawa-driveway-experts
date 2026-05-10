@@ -1,5 +1,6 @@
 import { Phone, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 const links = [
@@ -7,12 +8,15 @@ const links = [
   { label: "Projects", href: "#projects" },
   { label: "Why Us", href: "#why-us" },
   { label: "Reviews", href: "#reviews" },
+  { label: "FAQs", href: "/faqs" },
   { label: "Contact", href: "#quote" },
 ];
 
 export const Header = () => {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -20,6 +24,36 @@ export const Header = () => {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // After navigating to /#hash from another route, scroll to the target once the page mounts
+  useEffect(() => {
+    if (!location.hash) return;
+    const timer = setTimeout(() => {
+      document.querySelector(location.hash)?.scrollIntoView({ behavior: "smooth" });
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [location.hash, location.pathname]);
+
+  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (!href.startsWith("#")) return; // /faqs and other full routes: let the browser handle normally
+    e.preventDefault();
+    setOpen(false);
+    if (location.pathname === "/") {
+      document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      navigate({ pathname: "/", hash: href });
+    }
+  };
+
+  const handleLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    setOpen(false);
+    if (location.pathname === "/") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      navigate("/");
+    }
+  };
 
   return (
     <header
@@ -30,8 +64,8 @@ export const Header = () => {
       }`}
     >
       <div className="container flex items-center justify-between h-16 md:h-20">
-        <a href="#top" className="flex items-center gap-2 group">
-          <div className={`w-9 h-9 rounded-full bg-gradient-gold flex items-center justify-center font-display font-bold text-accent-foreground transition-transform group-hover:scale-110`}>
+        <a href="/" onClick={handleLogoClick} className="flex items-center gap-2 group">
+          <div className="w-9 h-9 rounded-full bg-gradient-gold flex items-center justify-center font-display font-bold text-accent-foreground transition-transform group-hover:scale-110">
             O
           </div>
           <div className="flex flex-col leading-none">
@@ -48,7 +82,8 @@ export const Header = () => {
           {links.map((l) => (
             <a
               key={l.href}
-              href={l.href}
+              href={l.href.startsWith("#") ? `/${l.href}` : l.href}
+              onClick={(e) => handleLinkClick(e, l.href)}
               className={`text-sm font-medium transition-colors hover:text-accent ${
                 scrolled ? "text-foreground/80" : "text-white/90"
               }`}
@@ -59,10 +94,10 @@ export const Header = () => {
         </nav>
 
         <div className="flex items-center gap-3">
-          <a href="tel:+16138677130" className="hidden sm:block">
+          <a href="tel:+16138641485" className="hidden sm:block">
             <Button variant="gold" size="default" className="gap-2">
               <Phone className="w-4 h-4" />
-              (613) 867-7130
+              (613) 864-1485
             </Button>
           </a>
           <button
@@ -87,17 +122,17 @@ export const Header = () => {
           {links.map((l) => (
             <a
               key={l.href}
-              href={l.href}
-              onClick={() => setOpen(false)}
+              href={l.href.startsWith("#") ? `/${l.href}` : l.href}
+              onClick={(e) => handleLinkClick(e, l.href)}
               className="py-3 px-2 text-foreground/80 font-medium border-b border-border/50 last:border-0 hover:text-accent transition-colors"
             >
               {l.label}
             </a>
           ))}
-          <a href="tel:+16138677130" className="mt-3 sm:hidden">
+          <a href="tel:+16138641485" className="mt-3 sm:hidden">
             <Button variant="gold" className="w-full gap-2">
               <Phone className="w-4 h-4" />
-              (613) 867-7130
+              (613) 864-1485
             </Button>
           </a>
         </nav>

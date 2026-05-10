@@ -123,6 +123,10 @@
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+    /* Prevent italic/serif descenders from being clipped by the background mask */
+    display: inline-block;
+    padding-bottom: 0.12em;
+    letter-spacing: 0;
   }
   .bg-gradient-dark {
     background: var(--gradient-dark);

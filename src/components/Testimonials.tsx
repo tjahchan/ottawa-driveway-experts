@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Quote, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { Reveal } from "./Reveal";
 
@@ -40,10 +40,13 @@ export const Testimonials = () => {
   const next = useCallback(() => setIndex((i) => (i + 1) % total), [total]);
   const prev = useCallback(() => setIndex((i) => (i - 1 + total) % total), [total]);
 
+  // FIX 3 — use a ref so the interval never restarts when `next` identity changes
+  const nextRef = useRef(next);
+  useEffect(() => { nextRef.current = next; }, [next]);
   useEffect(() => {
-    const id = setInterval(next, 5000);
+    const id = setInterval(() => nextRef.current(), 5000);
     return () => clearInterval(id);
-  }, [next]);
+  }, []); // empty deps — interval never restarts
 
   return (
     <section id="reviews" className="py-12 md:py-16 bg-background">

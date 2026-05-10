@@ -1,4 +1,4 @@
-import { Phone, Mail, MapPin } from "lucide-react";
+import { Phone, Mail, MapPin, Facebook, Instagram } from "lucide-react";
 
 export const Footer = () => {
   return (
@@ -43,9 +43,9 @@ export const Footer = () => {
             <h4 className="font-display font-semibold text-white mb-4 text-base">Contact</h4>
             <ul className="space-y-3 text-sm">
               <li>
-                <a href="tel:+16138677130" className="flex items-start gap-3 hover:text-accent transition-colors">
+                <a href="tel:+16138641485" className="flex items-start gap-3 hover:text-accent transition-colors">
                   <Phone className="w-4 h-4 mt-0.5 shrink-0 text-accent" />
-                  <span>(613) 867-7130</span>
+                  <span>(613) 864-1485</span>
                 </a>
               </li>
               <li>
@@ -57,6 +57,26 @@ export const Footer = () => {
               <li className="flex items-start gap-3">
                 <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-accent" />
                 <span>Ottawa, Ontario, Canada</span>
+              </li>
+              <li className="flex items-center gap-3 pt-1">
+                <a
+                  href="https://www.facebook.com/chevriergroup"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Follow us on Facebook"
+                  className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-accent/40 text-accent hover:bg-accent hover:text-accent-foreground transition-colors"
+                >
+                  <Facebook className="w-5 h-5" />
+                </a>
+                <a
+                  href="https://www.instagram.com/ottawadrivewayexperts/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Follow us on Instagram"
+                  className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-accent/40 text-accent hover:bg-accent hover:text-accent-foreground transition-colors"
+                >
+                  <Instagram className="w-5 h-5" />
+                </a>
               </li>
             </ul>
           </div>

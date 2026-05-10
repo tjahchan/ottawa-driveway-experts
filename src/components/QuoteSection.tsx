@@ -1,12 +1,11 @@
-import { useState, useRef, type FormEvent, type ChangeEvent } from "react";
-import { Phone, Mail, MapPin, Send, Check, Upload, X, ImageIcon } from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { Phone, Mail, MapPin, Send, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "./Reveal";
 import { toast } from "sonner";
 import { z } from "zod";
 
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
-const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
+const DRAFT_KEY = "quote_form_draft";
 
 const schema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
@@ -18,46 +17,83 @@ const schema = z.object({
 
 const services = [
   "Asphalt Driveway Paving",
-  "Driveway Sealing",
+  "Driveway Sealing & Coating",
   "Interlock & Pavers",
   "Repairs & Resurfacing",
+  "Crack Filling & Patching",
+  "Asphalt Cutouts/Overlays & Patching",
+  "Asphalt Lips/Ramps",
+  "Concrete Services",
+  "Aggregates Supply",
+  "Line Painting & Symbols",
   "Other / Not Sure",
 ];
 
+const EDGE_FN_URL = "https://gorhemjqclfqedohjgtw.supabase.co/functions/v1/handle-quote-submission";
+
+type Draft = {
+  name: string;
+  phone: string;
+  email: string;
+  service: string;
+  message: string;
+};
+
+const initialFormState: Draft = { name: "", phone: "", email: "", service: "", message: "" };
+
+async function fetchWithRetry(url: string, options: RequestInit, maxAttempts = 3): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, attempt * 1000));
+    }
+    try {
+      const res = await fetch(url, options);
+      if (res.status >= 400 && res.status < 500) return res; // don't retry 4xx
+      if (res.ok) return res;
+      // 5xx — retry
+      lastError = new Error(`Server error ${res.status}`);
+    } catch (err) {
+      lastError = err; // network error — retry
+    }
+  }
+  throw lastError;
+}
+
 export const QuoteSection = () => {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [image, setImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [form, setForm] = useState<Draft>(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      return saved ? (JSON.parse(saved) as Draft) : initialFormState;
+    } catch {
+      return initialFormState;
+    }
+  });
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      toast.error("Please upload a JPG, PNG, WEBP or HEIC image.");
-      return;
-    }
-    if (file.size > MAX_IMAGE_SIZE) {
-      toast.error("Image must be less than 5MB.");
-      return;
-    }
-    setImage(file);
-    const reader = new FileReader();
-    reader.onload = () => setImagePreview(reader.result as string);
-    reader.readAsDataURL(file);
+  const resetForm = () => {
+    setForm(initialFormState);
+    localStorage.removeItem(DRAFT_KEY);
   };
 
-  const removeImage = () => {
-    setImage(null);
-    setImagePreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  const handleFieldChange = (field: keyof Draft, value: string) => {
+    setForm((prev) => {
+      const next = { ...prev, [field]: value };
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(next));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.currentTarget));
-    const result = schema.safeParse(data);
+    const result = schema.safeParse(form);
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
       result.error.issues.forEach((i) => {
@@ -68,8 +104,88 @@ export const QuoteSection = () => {
       return;
     }
     setErrors({});
-    setSubmitted(true);
-    toast.success("Quote request received! We'll reach out within 24 hours.");
+
+    // Save draft before sending
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(form));
+    } catch {
+      // ignore
+    }
+
+    setSubmitting(true);
+    setRetrying(false);
+
+    const body = JSON.stringify({
+      name: result.data.name,
+      phone: result.data.phone,
+      email: result.data.email,
+      service: result.data.service,
+      message: result.data.message ?? "",
+    });
+
+    try {
+      let attemptCount = 0;
+      const res = await (async () => {
+        let lastError: unknown;
+        const maxAttempts = 3;
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          if (attempt > 0) {
+            setRetrying(true);
+            await new Promise((r) => setTimeout(r, attempt * 1000));
+          }
+          attemptCount = attempt + 1;
+          try {
+            const r = await fetch(EDGE_FN_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body,
+            });
+            if (r.status >= 400 && r.status < 500) return r; // don't retry 4xx
+            if (r.ok) return r;
+            lastError = new Error(`Server error ${r.status}`);
+            // 5xx — loop again
+            void attemptCount;
+          } catch (err) {
+            lastError = err;
+          }
+        }
+        throw lastError;
+      })();
+
+      setRetrying(false);
+
+      if (!res.ok) {
+        if (res.status === 429) {
+          toast.error("Too many requests — please wait a moment and try again.");
+        } else if (res.status >= 500) {
+          toast.error("Server error — we'll retry automatically.");
+        } else {
+          toast.error("Submission failed. Please call us at (613) 864-1485.");
+        }
+        return;
+      }
+
+      localStorage.removeItem(DRAFT_KEY);
+      setSubmitted(true);
+      toast.success("Quote request received! We'll reach out within 24 hours.");
+
+      // Reset form after 3 seconds so user can read the success message
+      setTimeout(() => {
+        resetForm();
+        setSubmitted(false);
+      }, 3000);
+    } catch (err) {
+      setRetrying(false);
+      const isNetwork = err instanceof TypeError;
+      if (isNetwork) {
+        toast.error("Network error — check your connection.");
+      } else {
+        toast.error("Server error — we'll retry automatically.");
+      }
+    } finally {
+      setSubmitting(false);
+      setRetrying(false);
+    }
   };
 
   return (
@@ -95,7 +211,7 @@ export const QuoteSection = () => {
 
             <div className="space-y-5">
               <a
-                href="tel:+16138677130"
+                href="tel:+16138641485"
                 className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] hover:border-accent/40 transition-all group"
               >
                 <div className="w-12 h-12 rounded-xl bg-gradient-gold flex items-center justify-center shrink-0">
@@ -103,7 +219,7 @@ export const QuoteSection = () => {
                 </div>
                 <div>
                   <div className="text-xs uppercase tracking-wider text-primary-foreground/60">Call us</div>
-                  <div className="font-semibold text-lg group-hover:text-accent transition-colors">(613) 867-7130</div>
+                  <div className="font-semibold text-lg group-hover:text-accent transition-colors">(613) 864-1485</div>
                 </div>
               </a>
 
@@ -116,7 +232,7 @@ export const QuoteSection = () => {
                 </div>
                 <div className="min-w-0">
                   <div className="text-xs uppercase tracking-wider text-primary-foreground/60">Email</div>
-                  <div className="font-semibold text-base md:text-lg break-all group-hover:text-accent transition-colors">
+                  <div className="font-semibold text-sm md:text-lg whitespace-nowrap group-hover:text-accent transition-colors">
                     ottawadrivewayexperts@gmail.com
                   </div>
                 </div>
@@ -149,100 +265,80 @@ export const QuoteSection = () => {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} noValidate className="space-y-5">
-                  <div className="grid md:grid-cols-2 gap-5">
-                    <Field label="Full Name" name="name" placeholder="John Smith" error={errors.name} />
-                    <Field label="Phone" name="phone" type="tel" placeholder="(613) 555-0100" error={errors.phone} />
-                  </div>
-                  <Field label="Email" name="email" type="email" placeholder="you@example.com" error={errors.email} />
-
-                  <div>
-                    <label htmlFor="service" className="block text-sm font-medium text-foreground mb-2">
-                      Service Needed
-                    </label>
-                    <select
-                      id="service"
-                      name="service"
-                      className="w-full h-12 px-4 rounded-xl bg-secondary border border-border focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition text-foreground"
-                      defaultValue=""
-                    >
-                      <option value="" disabled>Select a service...</option>
-                      {services.map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                    {errors.service && <p className="mt-1.5 text-sm text-destructive">{errors.service}</p>}
-                  </div>
-
-                  <div>
-                    <label htmlFor="message" className="block text-sm font-medium text-foreground mb-2">
-                      Project Details <span className="text-muted-foreground font-normal">(optional)</span>
-                    </label>
-                    <textarea
-                      id="message"
-                      name="message"
-                      rows={4}
-                      maxLength={1000}
-                      placeholder="Tell us about your driveway, approximate size, and any questions..."
-                      className="w-full px-4 py-3 rounded-xl bg-secondary border border-border focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition resize-none text-foreground placeholder:text-muted-foreground"
+                  <fieldset disabled={submitting} className="contents">
+                    <div className="grid md:grid-cols-2 gap-5">
+                      <Field
+                        label="Full Name *"
+                        name="name"
+                        placeholder="John Smith"
+                        error={errors.name}
+                        required
+                        value={form.name}
+                        onChange={(v) => handleFieldChange("name", v)}
+                      />
+                      <Field
+                        label="Phone *"
+                        name="phone"
+                        type="tel"
+                        placeholder="(613) 555-0100"
+                        error={errors.phone}
+                        required
+                        value={form.phone}
+                        onChange={(v) => handleFieldChange("phone", v)}
+                      />
+                    </div>
+                    <Field
+                      label="Email *"
+                      name="email"
+                      type="email"
+                      placeholder="you@example.com"
+                      error={errors.email}
+                      required
+                      value={form.email}
+                      onChange={(v) => handleFieldChange("email", v)}
                     />
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Add a Photo <span className="text-muted-foreground font-normal">(optional)</span>
-                    </label>
-                    <input
-                      ref={fileInputRef}
-                      id="image"
-                      name="image"
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-                      onChange={handleImageChange}
-                      className="sr-only"
-                    />
-                    {imagePreview ? (
-                      <div className="relative rounded-xl overflow-hidden border border-border bg-secondary group">
-                        <img
-                          src={imagePreview}
-                          alt="Driveway preview"
-                          className="w-full h-40 object-cover"
-                        />
-                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 p-2 bg-gradient-to-t from-black/70 to-transparent">
-                          <span className="text-xs text-white truncate flex items-center gap-1.5">
-                            <ImageIcon className="w-3.5 h-3.5 shrink-0" />
-                            {image?.name}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={removeImage}
-                            className="shrink-0 w-7 h-7 rounded-full bg-white/90 hover:bg-white text-foreground flex items-center justify-center transition"
-                            aria-label="Remove image"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="w-full flex flex-col items-center justify-center gap-2 px-4 py-6 rounded-xl bg-secondary border border-dashed border-border hover:border-accent hover:bg-secondary/70 transition text-center"
+                    <div>
+                      <label htmlFor="service" className="block text-sm font-medium text-foreground mb-2">
+                        Service Needed *
+                      </label>
+                      <select
+                        id="service"
+                        name="service"
+                        required
+                        value={form.service}
+                        onChange={(e) => handleFieldChange("service", e.target.value)}
+                        className="w-full h-12 px-4 rounded-xl bg-secondary border border-border focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition text-foreground"
                       >
-                        <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center">
-                          <Upload className="w-4 h-4 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-foreground">Upload a photo of your driveway</div>
-                          <div className="text-xs text-muted-foreground mt-0.5">JPG, PNG or WEBP • Max 5MB</div>
-                        </div>
-                      </button>
-                    )}
-                  </div>
+                        <option value="" disabled>Select a service...</option>
+                        {services.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                      {errors.service && <p className="mt-1.5 text-sm text-destructive">{errors.service}</p>}
+                    </div>
 
-                  <Button type="submit" variant="gold" size="lg" className="w-full gap-2">
-                    Request Free Quote
-                    <Send className="w-4 h-4" />
-                  </Button>
+                    <div>
+                      <label htmlFor="message" className="block text-sm font-medium text-foreground mb-2">
+                        Project Details <span className="text-muted-foreground font-normal">(optional)</span>
+                      </label>
+                      <textarea
+                        id="message"
+                        name="message"
+                        rows={4}
+                        maxLength={1000}
+                        value={form.message}
+                        onChange={(e) => handleFieldChange("message", e.target.value)}
+                        placeholder="Tell us about your driveway, approximate size, and any questions..."
+                        className="w-full px-4 py-3 rounded-xl bg-secondary border border-border focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition resize-none text-foreground placeholder:text-muted-foreground"
+                      />
+                    </div>
+
+                    <Button type="submit" variant="gold" size="lg" className="w-full gap-2" disabled={submitting}>
+                      {submitting ? (retrying ? "Retrying..." : "Sending...") : "Request Free Quote"}
+                      {!submitting && <Send className="w-4 h-4" />}
+                    </Button>
+                  </fieldset>
 
                   <p className="text-xs text-muted-foreground text-center">
                     No obligation • Response within 24 hours
@@ -263,9 +359,12 @@ interface FieldProps {
   type?: string;
   placeholder?: string;
   error?: string;
+  required?: boolean;
+  value: string;
+  onChange: (value: string) => void;
 }
 
-const Field = ({ label, name, type = "text", placeholder, error }: FieldProps) => (
+const Field = ({ label, name, type = "text", placeholder, error, required, value, onChange }: FieldProps) => (
   <div>
     <label htmlFor={name} className="block text-sm font-medium text-foreground mb-2">
       {label}
@@ -275,6 +374,9 @@ const Field = ({ label, name, type = "text", placeholder, error }: FieldProps) =
       name={name}
       type={type}
       placeholder={placeholder}
+      required={required}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
       className="w-full h-12 px-4 rounded-xl bg-secondary border border-border focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition text-foreground placeholder:text-muted-foreground"
     />
     {error && <p className="mt-1.5 text-sm text-destructive">{error}</p>}

@@ -51,7 +51,7 @@ export const WhyUs = () => {
           </Reveal>
           <Reveal delay={80}>
             <div className="max-w-3xl mx-auto text-center">
-              <h2 className="font-display text-3xl md:text-5xl lg:text-6xl font-semibold mb-4 leading-[1.1]">
+              <h2 className="font-display text-3xl md:text-5xl lg:text-6xl font-semibold mb-4 leading-[1.2]">
                 Craftsmanship that{" "}
                 <span className="text-gradient-gold italic">stands the test</span>{" "}
                 of Ottawa winters.
