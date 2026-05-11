@@ -7,6 +7,7 @@ const CORS = {
 
 const TENANT_ID = "a1b2c3d4-0001-0001-0001-000000000001";
 const NOTIFY_EMAIL = "PierreSr@OttawaDrivewayExperts.com";
+const TEAM_NOTIFY_TO = "dawn@ottawadrivewayexperts.com, admin@ottawadrivewayexperts.com";
 const DEFAULT_CITY = "Ottawa";
 const DEFAULT_PROVINCE = "Ontario";
 const DEFAULT_TAGS = ["Residential"];
@@ -55,33 +56,48 @@ Deno.serve(async (req) => {
       ? String(providedAddress).trim()
       : [houseNumberValue, streetValue].filter(Boolean).join(" ").trim();
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+
+    // Cross-function call helper. send-email has verify_jwt:true which rejects
+    // service-role JWTs from edge-to-edge calls. Anon key is also a valid
+    // project JWT and is accepted by verify_jwt:true. Pass apikey header too.
+    const callFunction = (slug: string, payload: unknown) =>
+      fetch(`${SUPABASE_URL}/functions/v1/${slug}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${ANON_KEY}`,
+          apikey: ANON_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
     const nameParts = String(name).trim().split(/\s+/);
     const first_name = nameParts[0] ?? "";
     const last_name = nameParts.slice(1).join(" ") || "";
 
     const daysStr = contactDaysValue.length > 0 ? contactDaysValue.join(", ") : "";
-    const fullAddress = [streetAddress, postalCodeValue].filter(Boolean).join(", ");
+    const fullAddressWithPostal = [streetAddress, postalCodeValue].filter(Boolean).join(", ");
+    const bookingAddress = streetAddress ? `${streetAddress}, ${DEFAULT_CITY}` : null;
     const preferredWindow = [contactTimeValue, daysStr].filter(Boolean).join(" · ");
 
     // Structured note block stored on the client record
-    const noteLines: string[] = [];
-    if (service) noteLines.push(`Service: ${service}`);
-    if (fullAddress) noteLines.push(`Address: ${fullAddress}`);
-    if (spousePhoneValue) noteLines.push(`Spouse phone: ${spousePhoneValue}`);
-    if (workPhoneValue) noteLines.push(`Work phone: ${workPhoneValue}`);
-    if (contactTimeValue) noteLines.push(`Best time: ${contactTimeValue}`);
-    if (daysStr) noteLines.push(`Best days: ${daysStr}`);
+    const clientNoteLines: string[] = [];
+    if (service) clientNoteLines.push(`Service: ${service}`);
+    if (fullAddressWithPostal) clientNoteLines.push(`Address: ${fullAddressWithPostal}`);
+    if (spousePhoneValue) clientNoteLines.push(`Spouse phone: ${spousePhoneValue}`);
+    if (workPhoneValue) clientNoteLines.push(`Work phone: ${workPhoneValue}`);
+    if (contactTimeValue) clientNoteLines.push(`Best time: ${contactTimeValue}`);
+    if (daysStr) clientNoteLines.push(`Best days: ${daysStr}`);
     if (message) {
-      noteLines.push("");
-      noteLines.push("Details:");
-      noteLines.push(String(message));
+      clientNoteLines.push("");
+      clientNoteLines.push("Details:");
+      clientNoteLines.push(String(message));
     }
-    const combinedNotes = noteLines.join("\n").trim();
+    const combinedNotes = clientNoteLines.join("\n").trim();
 
     // ---- Dedupe by email, then by trailing-digit phone match ----
     let existingClient: Record<string, unknown> | null = null;
@@ -130,17 +146,18 @@ Deno.serve(async (req) => {
       if (contactDaysValue.length > 0) updates.contact_days = contactDaysValue;
       await supabase.from("clients").update(updates).eq("id", clientId);
 
-      await supabase
-        .rpc("append_client_note", { p_client_id: clientId, p_note: appendNote })
-        .catch(async () => {
-          const { data: cur } = await supabase
-            .from("clients")
-            .select("notes")
-            .eq("id", clientId)
-            .single();
-          const newNotes = [cur?.notes, appendNote].filter(Boolean).join("\n\n");
-          await supabase.from("clients").update({ notes: newNotes }).eq("id", clientId);
-        });
+      // supabase.rpc() returns a builder (no .catch). Inspect { error } instead.
+      const { error: rpcErr } = await supabase
+        .rpc("append_client_note", { p_client_id: clientId, p_note: appendNote });
+      if (rpcErr) {
+        const { data: cur } = await supabase
+          .from("clients")
+          .select("notes")
+          .eq("id", clientId)
+          .single();
+        const newNotes = [cur?.notes, appendNote].filter(Boolean).join("\n\n");
+        await supabase.from("clients").update({ notes: newNotes }).eq("id", clientId);
+      }
     } else {
       isNewClient = true;
       const baseInsert: Record<string, unknown> = {
@@ -175,7 +192,6 @@ Deno.serve(async (req) => {
         .select()
         .single());
 
-      // Fallback: if any column is unknown, retry with a minimal payload
       if (insertError) {
         const fallback: Record<string, unknown> = {
           tenant_id: TENANT_ID,
@@ -197,7 +213,6 @@ Deno.serve(async (req) => {
       if (insertError) throw insertError;
       clientId = (insertData as Record<string, string>).id;
 
-      // Insert primary address into client_addresses so the CRM displays it
       if (streetAddress || postalCodeValue) {
         await supabase
           .from("client_addresses")
@@ -216,24 +231,23 @@ Deno.serve(async (req) => {
           });
       }
 
-      // Sync to Stripe in background
-      supabase.functions
-        .invoke("create-stripe-customer", { body: { clientId } })
-        .catch(() => {});
+      callFunction("create-stripe-customer", { clientId }).catch(() => {});
     }
 
     // ---- Auto-create a booking entry so this lead appears on Pierre's Schedule ----
-    // Both new and existing-client website submissions get a booking card.
-    // booking_date is left NULL (unscheduled) — Pierre fills it in.
-    const bookingNoteLines: string[] = [];
-    if (service) bookingNoteLines.push(`Service: ${service}`);
-    if (spousePhoneValue) bookingNoteLines.push(`Spouse: ${spousePhoneValue}`);
-    if (workPhoneValue) bookingNoteLines.push(`Work: ${workPhoneValue}`);
-    if (message) {
-      bookingNoteLines.push("");
-      bookingNoteLines.push(String(message));
-    }
-    const bookingNotes = bookingNoteLines.join("\n").trim();
+    // Booking fields map to the New Booking form Pierre uses manually:
+    //   client_name = full name        phone = cell        address = "<#> <Street>, Ottawa"
+    //   service = service              booking_date = NULL (Pierre will schedule)
+    //   booking_time = NULL            notes = structured block of unmapped form fields
+    const bookingNoteLines: string[] = ["Source: Website Form"];
+    if (email) bookingNoteLines.push(`Email: ${email}`);
+    if (postalCodeValue) bookingNoteLines.push(`Postal Code: ${postalCodeValue}`);
+    if (spousePhoneValue) bookingNoteLines.push(`Spouse Phone: ${spousePhoneValue}`);
+    if (workPhoneValue) bookingNoteLines.push(`Work Phone: ${workPhoneValue}`);
+    if (contactTimeValue) bookingNoteLines.push(`Best Time to Contact: ${contactTimeValue}`);
+    if (daysStr) bookingNoteLines.push(`Best Days Available: ${daysStr}`);
+    if (message) bookingNoteLines.push(`Project Details: ${String(message)}`);
+    const bookingNotes = bookingNoteLines.join("\n");
 
     await supabase
       .from("bookings")
@@ -243,9 +257,9 @@ Deno.serve(async (req) => {
         client_name: String(name),
         phone: cellValue,
         email: email ?? null,
-        address: fullAddress || null,
+        address: bookingAddress,
         service: service ?? null,
-        notes: bookingNotes || null,
+        notes: bookingNotes,
         booking_date: null,
         booking_time: null,
         preferred_window: preferredWindow || null,
@@ -256,27 +270,68 @@ Deno.serve(async (req) => {
         if (bookErr) console.error("bookings insert failed (non-fatal):", bookErr);
       });
 
-    // ---- Build email notification to Pierre ----
-    const subject = `New quote request: ${name} — ${service ?? "Unknown service"}`;
-    const bodyLines: string[] = [
+    // ---- Email #1 — Pierre (existing) ----
+    const pierreSubject = `New quote request: ${name} — ${service ?? "Unknown service"}`;
+    const pierreBodyLines: string[] = [
       `Name: ${name}`,
       `Cell: ${cellValue}`,
       ...(spousePhoneValue ? [`Spouse phone: ${spousePhoneValue}`] : []),
       ...(workPhoneValue ? [`Work phone: ${workPhoneValue}`] : []),
       `Email: ${email ?? "—"}`,
       `Service: ${service ?? "—"}`,
-      `Address: ${fullAddress || "—"}`,
+      `Address: ${fullAddressWithPostal || "—"}`,
       ...(contactTimeValue ? [`Best time to contact: ${contactTimeValue}`] : []),
       ...(daysStr ? [`Best day(s): ${daysStr}`] : []),
       "",
       existingClient ? `⚠️ Matched existing client (ID: ${clientId})` : "New client created.",
       ...(message ? ["", "Details:", String(message)] : []),
     ];
-    const emailBody = bodyLines.join("\n").trim();
+    const pierreBody = pierreBodyLines.join("\n").trim();
 
-    await supabase.functions.invoke("send-email", {
-      body: { to: NOTIFY_EMAIL, subject, body: emailBody, tenant_id: TENANT_ID },
-    });
+    try {
+      const r = await callFunction("send-email", {
+        to: NOTIFY_EMAIL, subject: pierreSubject, body: pierreBody, tenant_id: TENANT_ID,
+      });
+      if (!r.ok) {
+        const txt = await r.text();
+        console.error("Pierre notification failed:", r.status, txt);
+      }
+    } catch (err) {
+      console.error("Pierre notification threw:", err);
+    }
+
+    // ---- Email #2 — Dawn + Admin (new) ----
+    const teamSubject = `New Website Quote Request — ${name} (${service ?? "Unknown service"})`;
+    const teamBody = [
+      "A new quote request has been submitted on ottawadrivewayexperts.com.",
+      "",
+      `Name: ${name}`,
+      `Cell: ${cellValue}`,
+      `Email: ${email ?? "—"}`,
+      `Address: ${fullAddressWithPostal || "—"}`,
+      `Service: ${service ?? "—"}`,
+      "",
+      "Contact Preference:",
+      `- Best time: ${contactTimeValue || "—"}`,
+      `- Best days: ${daysStr || "—"}`,
+      "",
+      "Project Details:",
+      String(message || "—"),
+      "",
+      "This lead has been added to Pierre CRM automatically.",
+    ].join("\n");
+
+    try {
+      const r = await callFunction("send-email", {
+        to: TEAM_NOTIFY_TO, subject: teamSubject, body: teamBody, tenant_id: TENANT_ID,
+      });
+      if (!r.ok) {
+        const txt = await r.text();
+        console.error("Dawn/Admin notification failed:", r.status, txt);
+      }
+    } catch (err) {
+      console.error("Dawn/Admin notification threw:", err);
+    }
 
     return new Response(
       JSON.stringify({ ok: true, client_id: clientId, is_new_client: isNewClient }),
