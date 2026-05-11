@@ -7,6 +7,9 @@ const CORS = {
 
 const TENANT_ID = "a1b2c3d4-0001-0001-0001-000000000001";
 const NOTIFY_EMAIL = "PierreSr@OttawaDrivewayExperts.com";
+const DEFAULT_CITY = "Ottawa";
+const DEFAULT_PROVINCE = "Ontario";
+const DEFAULT_TAGS = ["Residential"];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -63,8 +66,9 @@ Deno.serve(async (req) => {
 
     const daysStr = contactDaysValue.length > 0 ? contactDaysValue.join(", ") : "";
     const fullAddress = [streetAddress, postalCodeValue].filter(Boolean).join(", ");
+    const preferredWindow = [contactTimeValue, daysStr].filter(Boolean).join(" · ");
 
-    // Structured note block (used for both new-client notes column and existing-client append)
+    // Structured note block stored on the client record
     const noteLines: string[] = [];
     if (service) noteLines.push(`Service: ${service}`);
     if (fullAddress) noteLines.push(`Address: ${fullAddress}`);
@@ -74,7 +78,7 @@ Deno.serve(async (req) => {
     if (daysStr) noteLines.push(`Best days: ${daysStr}`);
     if (message) {
       noteLines.push("");
-      noteLines.push("Message:");
+      noteLines.push("Details:");
       noteLines.push(String(message));
     }
     const combinedNotes = noteLines.join("\n").trim();
@@ -111,7 +115,6 @@ Deno.serve(async (req) => {
     let isNewClient = false;
 
     if (existingClient) {
-      // ---- Existing client: backfill any empty new fields + append a dated note ----
       clientId = existingClient.id as string;
       const appendNote = `--- New Website Request (${new Date().toLocaleDateString("en-CA")}) ---\n${combinedNotes}`;
 
@@ -139,7 +142,6 @@ Deno.serve(async (req) => {
           await supabase.from("clients").update({ notes: newNotes }).eq("id", clientId);
         });
     } else {
-      // ---- New client: full insert with all new structured fields ----
       isNewClient = true;
       const baseInsert: Record<string, unknown> = {
         tenant_id: TENANT_ID,
@@ -158,6 +160,7 @@ Deno.serve(async (req) => {
         contact_days: contactDaysValue.length > 0 ? contactDaysValue : null,
         service_requested: service ?? "",
         notes: combinedNotes,
+        tags: DEFAULT_TAGS,
         source: "website_form",
         lead_source: "Website",
         status: "lead",
@@ -172,7 +175,7 @@ Deno.serve(async (req) => {
         .select()
         .single());
 
-      // Fallback: if any column is unknown (legacy schema), retry with a minimal payload
+      // Fallback: if any column is unknown, retry with a minimal payload
       if (insertError) {
         const fallback: Record<string, unknown> = {
           tenant_id: TENANT_ID,
@@ -181,6 +184,7 @@ Deno.serve(async (req) => {
           phone: cellValue,
           email: email ?? "",
           notes: combinedNotes,
+          tags: DEFAULT_TAGS,
           lead_source: "Website",
         };
         ({ data: insertData, error: insertError } = await supabase
@@ -193,11 +197,64 @@ Deno.serve(async (req) => {
       if (insertError) throw insertError;
       clientId = (insertData as Record<string, string>).id;
 
+      // Insert primary address into client_addresses so the CRM displays it
+      if (streetAddress || postalCodeValue) {
+        await supabase
+          .from("client_addresses")
+          .insert({
+            tenant_id: TENANT_ID,
+            client_id: clientId,
+            label: "Primary",
+            address_line1: streetAddress || "",
+            city: DEFAULT_CITY,
+            province: DEFAULT_PROVINCE,
+            postal_code: postalCodeValue || null,
+            is_primary: true,
+          })
+          .then(({ error: addrErr }) => {
+            if (addrErr) console.error("client_addresses insert failed (non-fatal):", addrErr);
+          });
+      }
+
       // Sync to Stripe in background
       supabase.functions
         .invoke("create-stripe-customer", { body: { clientId } })
         .catch(() => {});
     }
+
+    // ---- Auto-create a booking entry so this lead appears on Pierre's Schedule ----
+    // Both new and existing-client website submissions get a booking card.
+    // booking_date is left NULL (unscheduled) — Pierre fills it in.
+    const bookingNoteLines: string[] = [];
+    if (service) bookingNoteLines.push(`Service: ${service}`);
+    if (spousePhoneValue) bookingNoteLines.push(`Spouse: ${spousePhoneValue}`);
+    if (workPhoneValue) bookingNoteLines.push(`Work: ${workPhoneValue}`);
+    if (message) {
+      bookingNoteLines.push("");
+      bookingNoteLines.push(String(message));
+    }
+    const bookingNotes = bookingNoteLines.join("\n").trim();
+
+    await supabase
+      .from("bookings")
+      .insert({
+        tenant_id: TENANT_ID,
+        client_id: clientId,
+        client_name: String(name),
+        phone: cellValue,
+        email: email ?? null,
+        address: fullAddress || null,
+        service: service ?? null,
+        notes: bookingNotes || null,
+        booking_date: null,
+        booking_time: null,
+        preferred_window: preferredWindow || null,
+        status: "pending",
+        source: "website_form",
+      })
+      .then(({ error: bookErr }) => {
+        if (bookErr) console.error("bookings insert failed (non-fatal):", bookErr);
+      });
 
     // ---- Build email notification to Pierre ----
     const subject = `New quote request: ${name} — ${service ?? "Unknown service"}`;
@@ -213,7 +270,7 @@ Deno.serve(async (req) => {
       ...(daysStr ? [`Best day(s): ${daysStr}`] : []),
       "",
       existingClient ? `⚠️ Matched existing client (ID: ${clientId})` : "New client created.",
-      ...(message ? ["", "Message:", String(message)] : []),
+      ...(message ? ["", "Details:", String(message)] : []),
     ];
     const emailBody = bodyLines.join("\n").trim();
 
