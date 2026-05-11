@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Phone, Mail, MapPin, Send, Check } from "lucide-react";
+import { Phone, Mail, MapPin, Send, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "./Reveal";
 import { toast } from "sonner";
@@ -7,12 +7,21 @@ import { z } from "zod";
 
 const DRAFT_KEY = "quote_form_draft";
 
+const POSTAL_REGEX = /^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$/;
+
 const schema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
-  phone: z.string().trim().min(7, "Valid phone required").max(30),
+  cell: z.string().trim().min(7, "Cell number is required").max(30),
+  spousePhone: z.string().trim().max(30).optional().or(z.literal("")),
+  workPhone: z.string().trim().max(30).optional().or(z.literal("")),
   email: z.string().trim().email("Valid email required").max(255),
+  houseNumber: z.string().trim().min(1, "House # is required").max(20),
+  street: z.string().trim().min(1, "Street name is required").max(200),
+  postalCode: z.string().trim().regex(POSTAL_REGEX, "Format: K2T 1C1"),
   service: z.string().min(1, "Please select a service"),
-  message: z.string().trim().max(1000).optional(),
+  message: z.string().trim().max(1000).optional().or(z.literal("")),
+  contactTime: z.enum(["", "Morning", "Afternoon", "Evening"]).optional(),
+  contactDays: z.array(z.string()).optional(),
 });
 
 const services = [
@@ -29,64 +38,103 @@ const services = [
   "Other / Not Sure",
 ];
 
+const TIMES = ["Morning", "Afternoon", "Evening"] as const;
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
+
 const EDGE_FN_URL = "https://gorhemjqclfqedohjgtw.supabase.co/functions/v1/handle-quote-submission";
+
+type ContactTime = "" | "Morning" | "Afternoon" | "Evening";
 
 type Draft = {
   name: string;
-  phone: string;
+  cell: string;
+  spousePhone: string;
+  workPhone: string;
   email: string;
+  houseNumber: string;
+  street: string;
+  postalCode: string;
   service: string;
   message: string;
+  contactTime: ContactTime;
+  contactDays: string[];
 };
 
-const initialFormState: Draft = { name: "", phone: "", email: "", service: "", message: "" };
+const initialFormState: Draft = {
+  name: "",
+  cell: "",
+  spousePhone: "",
+  workPhone: "",
+  email: "",
+  houseNumber: "",
+  street: "",
+  postalCode: "",
+  service: "",
+  message: "",
+  contactTime: "",
+  contactDays: [],
+};
 
-async function fetchWithRetry(url: string, options: RequestInit, maxAttempts = 3): Promise<Response> {
-  let lastError: unknown;
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    if (attempt > 0) {
-      await new Promise((r) => setTimeout(r, attempt * 1000));
-    }
-    try {
-      const res = await fetch(url, options);
-      if (res.status >= 400 && res.status < 500) return res; // don't retry 4xx
-      if (res.ok) return res;
-      // 5xx — retry
-      lastError = new Error(`Server error ${res.status}`);
-    } catch (err) {
-      lastError = err; // network error — retry
-    }
+const loadDraft = (): Draft => {
+  try {
+    const saved = localStorage.getItem(DRAFT_KEY);
+    if (!saved) return initialFormState;
+    const parsed = JSON.parse(saved) as Partial<Draft> & { phone?: string };
+    return {
+      ...initialFormState,
+      ...parsed,
+      // Migrate prior draft: phone -> cell
+      cell: parsed.cell || parsed.phone || "",
+      contactDays: Array.isArray(parsed.contactDays) ? parsed.contactDays : [],
+    };
+  } catch {
+    return initialFormState;
   }
-  throw lastError;
-}
+};
+
+const formatPostal = (raw: string) => {
+  const clean = raw.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 6);
+  return clean.length <= 3 ? clean : `${clean.slice(0, 3)} ${clean.slice(3)}`;
+};
 
 export const QuoteSection = () => {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [form, setForm] = useState<Draft>(() => {
+  const [showExtraPhones, setShowExtraPhones] = useState(false);
+  const [form, setForm] = useState<Draft>(loadDraft);
+
+  const persistDraft = (next: Draft) => {
     try {
-      const saved = localStorage.getItem(DRAFT_KEY);
-      return saved ? (JSON.parse(saved) as Draft) : initialFormState;
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(next));
     } catch {
-      return initialFormState;
+      // ignore
     }
-  });
+  };
 
   const resetForm = () => {
     setForm(initialFormState);
+    setShowExtraPhones(false);
     localStorage.removeItem(DRAFT_KEY);
   };
 
-  const handleFieldChange = (field: keyof Draft, value: string) => {
+  const updateField = <K extends keyof Draft>(field: K, value: Draft[K]) => {
     setForm((prev) => {
       const next = { ...prev, [field]: value };
-      try {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify(next));
-      } catch {
-        // ignore storage errors
-      }
+      persistDraft(next);
+      return next;
+    });
+  };
+
+  const toggleDay = (day: string) => {
+    setForm((prev) => {
+      const has = prev.contactDays.includes(day);
+      const next = {
+        ...prev,
+        contactDays: has ? prev.contactDays.filter((d) => d !== day) : [...prev.contactDays, day],
+      };
+      persistDraft(next);
       return next;
     });
   };
@@ -100,31 +148,39 @@ export const QuoteSection = () => {
         if (i.path[0]) fieldErrors[i.path[0] as string] = i.message;
       });
       setErrors(fieldErrors);
+      // If errors are in collapsed phones, expand so user can see them
+      if (fieldErrors.spousePhone || fieldErrors.workPhone) setShowExtraPhones(true);
       toast.error("Please check the form and try again.");
       return;
     }
     setErrors({});
 
-    // Save draft before sending
-    try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(form));
-    } catch {
-      // ignore
-    }
+    persistDraft(form);
 
     setSubmitting(true);
     setRetrying(false);
 
+    const data = result.data;
+    const address = `${data.houseNumber} ${data.street}, ${data.postalCode}`;
+
     const body = JSON.stringify({
-      name: result.data.name,
-      phone: result.data.phone,
-      email: result.data.email,
-      service: result.data.service,
-      message: result.data.message ?? "",
+      name: data.name,
+      cell: data.cell,
+      phone: data.cell, // alias for backward-compat with existing edge function
+      spousePhone: data.spousePhone ?? "",
+      workPhone: data.workPhone ?? "",
+      email: data.email,
+      houseNumber: data.houseNumber,
+      street: data.street,
+      postalCode: data.postalCode,
+      address,
+      service: data.service,
+      message: data.message ?? "",
+      contactTime: data.contactTime ?? "",
+      contactDays: data.contactDays ?? [],
     });
 
     try {
-      let attemptCount = 0;
       const res = await (async () => {
         let lastError: unknown;
         const maxAttempts = 3;
@@ -133,7 +189,6 @@ export const QuoteSection = () => {
             setRetrying(true);
             await new Promise((r) => setTimeout(r, attempt * 1000));
           }
-          attemptCount = attempt + 1;
           try {
             const r = await fetch(EDGE_FN_URL, {
               method: "POST",
@@ -143,8 +198,6 @@ export const QuoteSection = () => {
             if (r.status >= 400 && r.status < 500) return r; // don't retry 4xx
             if (r.ok) return r;
             lastError = new Error(`Server error ${r.status}`);
-            // 5xx — loop again
-            void attemptCount;
           } catch (err) {
             lastError = err;
           }
@@ -169,7 +222,6 @@ export const QuoteSection = () => {
       setSubmitted(true);
       toast.success("Quote request received! We'll reach out within 24 hours.");
 
-      // Reset form after 3 seconds so user can read the success message
       setTimeout(() => {
         resetForm();
         setSubmitted(false);
@@ -177,11 +229,7 @@ export const QuoteSection = () => {
     } catch (err) {
       setRetrying(false);
       const isNetwork = err instanceof TypeError;
-      if (isNetwork) {
-        toast.error("Network error — check your connection.");
-      } else {
-        toast.error("Server error — we'll retry automatically.");
-      }
+      toast.error(isNetwork ? "Network error — check your connection." : "Server error — we'll retry automatically.");
     } finally {
       setSubmitting(false);
       setRetrying(false);
@@ -224,7 +272,7 @@ export const QuoteSection = () => {
               </a>
 
               <a
-                href="mailto:ottawadrivewayexperts@gmail.com"
+                href="mailto:PierreSr@OttawaDrivewayExperts.com"
                 className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] hover:border-accent/40 transition-all group"
               >
                 <div className="w-12 h-12 rounded-xl bg-gradient-gold flex items-center justify-center shrink-0">
@@ -233,7 +281,7 @@ export const QuoteSection = () => {
                 <div className="min-w-0">
                   <div className="text-xs uppercase tracking-wider text-primary-foreground/60">Email</div>
                   <div className="font-semibold text-sm md:text-lg whitespace-nowrap group-hover:text-accent transition-colors">
-                    ottawadrivewayexperts@gmail.com
+                    PierreSr@OttawaDrivewayExperts.com
                   </div>
                 </div>
               </a>
@@ -266,38 +314,142 @@ export const QuoteSection = () => {
               ) : (
                 <form onSubmit={handleSubmit} noValidate className="space-y-5">
                   <fieldset disabled={submitting} className="contents">
+                    {/* Name + Cell */}
                     <div className="grid md:grid-cols-2 gap-5">
                       <Field
                         label="Full Name *"
                         name="name"
                         placeholder="John Smith"
+                        autoComplete="name"
                         error={errors.name}
                         required
                         value={form.name}
-                        onChange={(v) => handleFieldChange("name", v)}
+                        onChange={(v) => updateField("name", v)}
                       />
                       <Field
-                        label="Phone *"
-                        name="phone"
+                        label="Cell Number *"
+                        name="cell"
                         type="tel"
                         placeholder="(613) 555-0100"
-                        error={errors.phone}
+                        autoComplete="tel"
+                        error={errors.cell}
                         required
-                        value={form.phone}
-                        onChange={(v) => handleFieldChange("phone", v)}
+                        value={form.cell}
+                        onChange={(v) => updateField("cell", v)}
                       />
                     </div>
+
+                    {/* Additional phone numbers (collapsible) */}
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setShowExtraPhones((s) => !s)}
+                        className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-accent transition-colors -mt-2"
+                        aria-expanded={showExtraPhones}
+                        aria-controls="extra-phones"
+                      >
+                        {showExtraPhones ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        {showExtraPhones ? "Hide additional numbers" : "+ Add another number"}
+                      </button>
+
+                      {showExtraPhones && (
+                        <div id="extra-phones" className="mt-4 grid md:grid-cols-2 gap-5">
+                          <Field
+                            label="Spouse's Number"
+                            name="spousePhone"
+                            type="tel"
+                            placeholder="(613) 555-0100"
+                            autoComplete="tel"
+                            error={errors.spousePhone}
+                            value={form.spousePhone}
+                            onChange={(v) => updateField("spousePhone", v)}
+                          />
+                          <Field
+                            label="Work Number"
+                            name="workPhone"
+                            type="tel"
+                            placeholder="(613) 555-0100"
+                            autoComplete="tel"
+                            error={errors.workPhone}
+                            value={form.workPhone}
+                            onChange={(v) => updateField("workPhone", v)}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Email */}
                     <Field
                       label="Email *"
                       name="email"
                       type="email"
                       placeholder="you@example.com"
+                      autoComplete="email"
                       error={errors.email}
                       required
                       value={form.email}
-                      onChange={(v) => handleFieldChange("email", v)}
+                      onChange={(v) => updateField("email", v)}
                     />
 
+                    {/* Service Address — grouped */}
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Service Address *</label>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <div className="md:col-span-1">
+                          <input
+                            id="houseNumber"
+                            name="houseNumber"
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="123"
+                            autoComplete="address-line1"
+                            aria-label="House number"
+                            aria-invalid={!!errors.houseNumber}
+                            required
+                            value={form.houseNumber}
+                            onChange={(e) => updateField("houseNumber", e.target.value)}
+                            className="w-full h-12 px-4 rounded-xl bg-secondary border border-border focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition text-foreground placeholder:text-muted-foreground"
+                          />
+                          {errors.houseNumber && <p className="mt-1.5 text-sm text-destructive">{errors.houseNumber}</p>}
+                        </div>
+                        <div className="md:col-span-2">
+                          <input
+                            id="street"
+                            name="street"
+                            type="text"
+                            placeholder="Elm Street"
+                            autoComplete="street-address"
+                            aria-label="Street name"
+                            aria-invalid={!!errors.street}
+                            required
+                            value={form.street}
+                            onChange={(e) => updateField("street", e.target.value)}
+                            className="w-full h-12 px-4 rounded-xl bg-secondary border border-border focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition text-foreground placeholder:text-muted-foreground"
+                          />
+                          {errors.street && <p className="mt-1.5 text-sm text-destructive">{errors.street}</p>}
+                        </div>
+                        <div className="md:col-span-1">
+                          <input
+                            id="postalCode"
+                            name="postalCode"
+                            type="text"
+                            inputMode="text"
+                            placeholder="K2T 1C1"
+                            autoComplete="postal-code"
+                            aria-label="Postal code"
+                            aria-invalid={!!errors.postalCode}
+                            required
+                            maxLength={7}
+                            value={form.postalCode}
+                            onChange={(e) => updateField("postalCode", formatPostal(e.target.value))}
+                            className="w-full h-12 px-4 rounded-xl bg-secondary border border-border focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition text-foreground placeholder:text-muted-foreground uppercase"
+                          />
+                          {errors.postalCode && <p className="mt-1.5 text-sm text-destructive">{errors.postalCode}</p>}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Service */}
                     <div>
                       <label htmlFor="service" className="block text-sm font-medium text-foreground mb-2">
                         Service Needed *
@@ -307,7 +459,7 @@ export const QuoteSection = () => {
                         name="service"
                         required
                         value={form.service}
-                        onChange={(e) => handleFieldChange("service", e.target.value)}
+                        onChange={(e) => updateField("service", e.target.value)}
                         className="w-full h-12 px-4 rounded-xl bg-secondary border border-border focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition text-foreground"
                       >
                         <option value="" disabled>Select a service...</option>
@@ -318,6 +470,7 @@ export const QuoteSection = () => {
                       {errors.service && <p className="mt-1.5 text-sm text-destructive">{errors.service}</p>}
                     </div>
 
+                    {/* Project Details */}
                     <div>
                       <label htmlFor="message" className="block text-sm font-medium text-foreground mb-2">
                         Project Details <span className="text-muted-foreground font-normal">(optional)</span>
@@ -328,10 +481,50 @@ export const QuoteSection = () => {
                         rows={4}
                         maxLength={1000}
                         value={form.message}
-                        onChange={(e) => handleFieldChange("message", e.target.value)}
+                        onChange={(e) => updateField("message", e.target.value)}
                         placeholder="Tell us about your driveway, approximate size, and any questions..."
                         className="w-full px-4 py-3 rounded-xl bg-secondary border border-border focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition resize-none text-foreground placeholder:text-muted-foreground"
                       />
+                    </div>
+
+                    {/* Contact Preference */}
+                    <div className="pt-2">
+                      <h3 className="text-sm font-semibold uppercase tracking-wider text-foreground mb-4">
+                        Contact Preference
+                      </h3>
+
+                      <div className="mb-5">
+                        <label className="block text-sm font-medium text-foreground mb-2">Best time to contact</label>
+                        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Best time to contact">
+                          {TIMES.map((t) => (
+                            <Pill
+                              key={t}
+                              role="radio"
+                              active={form.contactTime === t}
+                              onClick={() =>
+                                updateField("contactTime", form.contactTime === t ? "" : t)
+                              }
+                            >
+                              {t}
+                            </Pill>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">Best day(s) available</label>
+                        <div className="flex flex-wrap gap-2" role="group" aria-label="Best days available">
+                          {DAYS.map((d) => (
+                            <Pill
+                              key={d}
+                              active={form.contactDays.includes(d)}
+                              onClick={() => toggleDay(d)}
+                            >
+                              {d}
+                            </Pill>
+                          ))}
+                        </div>
+                      </div>
                     </div>
 
                     <Button type="submit" variant="gold" size="lg" className="w-full gap-2" disabled={submitting}>
@@ -358,13 +551,14 @@ interface FieldProps {
   name: string;
   type?: string;
   placeholder?: string;
+  autoComplete?: string;
   error?: string;
   required?: boolean;
   value: string;
   onChange: (value: string) => void;
 }
 
-const Field = ({ label, name, type = "text", placeholder, error, required, value, onChange }: FieldProps) => (
+const Field = ({ label, name, type = "text", placeholder, autoComplete, error, required, value, onChange }: FieldProps) => (
   <div>
     <label htmlFor={name} className="block text-sm font-medium text-foreground mb-2">
       {label}
@@ -374,11 +568,38 @@ const Field = ({ label, name, type = "text", placeholder, error, required, value
       name={name}
       type={type}
       placeholder={placeholder}
+      autoComplete={autoComplete}
       required={required}
+      aria-invalid={!!error}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className="w-full h-12 px-4 rounded-xl bg-secondary border border-border focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition text-foreground placeholder:text-muted-foreground"
     />
     {error && <p className="mt-1.5 text-sm text-destructive">{error}</p>}
   </div>
+);
+
+interface PillProps {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  role?: string;
+}
+
+const Pill = ({ active, onClick, children, role }: PillProps) => (
+  <button
+    type="button"
+    role={role}
+    aria-checked={role === "radio" ? active : undefined}
+    aria-pressed={role !== "radio" ? active : undefined}
+    onClick={onClick}
+    className={
+      "px-4 h-10 rounded-full text-sm font-medium border transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent/40 " +
+      (active
+        ? "bg-accent text-accent-foreground border-accent shadow-gold"
+        : "bg-secondary text-foreground border-border hover:border-accent/60 hover:text-foreground")
+    }
+  >
+    {children}
+  </button>
 );

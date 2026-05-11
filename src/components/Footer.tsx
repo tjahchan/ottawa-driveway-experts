@@ -49,9 +49,9 @@ export const Footer = () => {
                 </a>
               </li>
               <li>
-                <a href="mailto:ottawadrivewayexperts@gmail.com" className="flex items-start gap-3 hover:text-accent transition-colors">
+                <a href="mailto:PierreSr@OttawaDrivewayExperts.com" className="flex items-start gap-3 hover:text-accent transition-colors">
                   <Mail className="w-4 h-4 mt-0.5 shrink-0 text-accent" />
-                  <span className="break-all">ottawadrivewayexperts@gmail.com</span>
+                  <span className="break-all">PierreSr@OttawaDrivewayExperts.com</span>
                 </a>
               </li>
               <li className="flex items-start gap-3">
